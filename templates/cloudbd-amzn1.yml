@@ -369,7 +369,7 @@ Resources:
           files:
             /etc/yum.repos.d/cloudbd.repo:
               source: https://repo.cloudbd.io/amzn1/cloudbd.repo
-              mode: "000640"
+              mode: "000644"
               owner: "root"
               group: "root"
         Install:
