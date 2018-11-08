@@ -307,3 +307,39 @@ Outputs:
     Value: !Ref CloudBDSecurityGroup
     Export:
       Name: !Join [ "-", [ !Ref "AWS::StackName", SecurityGroup ] ]
+  SubNetA:
+    Description: CloudBD Subnet A Ref
+    Value:
+      !If [AvailabilityZoneA, !Ref CloudBDSubnetA, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-a ] ]
+  SubNetB:
+    Description: CloudBD Subnet B Ref
+    Value:
+      !If [AvailabilityZoneB, !Ref CloudBDSubnetB, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-b ] ]
+  SubNetC:
+    Description: CloudBD Subnet C Ref
+    Value:
+      !If [AvailabilityZoneC, !Ref CloudBDSubnetC, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-c ] ]
+  SubNetD:
+    Description: CloudBD Subnet D Ref
+    Value:
+      !If [AvailabilityZoneD, !Ref CloudBDSubnetD, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-d ] ]
+  SubNetE:
+    Description: CloudBD Subnet E Ref
+    Value:
+      !If [AvailabilityZoneE, !Ref CloudBDSubnetE, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-e ] ]
+  SubNetF:
+    Description: CloudBD Subnet F Ref
+    Value:
+      !If [AvailabilityZoneF, !Ref CloudBDSubnetE, 'unconfigured' ]
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-f ] ]
