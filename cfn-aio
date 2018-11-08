@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 # change the working dir to the top of the repo
-REPO_PATH=$(realpath $(dirname ${BASH_SOURCE[0]}))
+REPO_PATH=$(dirname $(python -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))"))
 cd ${REPO_PATH}
 
 CBD_CONFIG_FILE="./config/.cfn-aio-config"
