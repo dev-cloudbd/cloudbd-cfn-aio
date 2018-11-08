@@ -403,9 +403,13 @@ Resources:
                   fi
                 - ConfURL: !Ref CredentialsURL
                   ConfFile: /etc/cloudbd/credentials.json
+            03-cloudbd-group:
+              command: !Sub |
+                set -xe
+                usermod -a -G cloudbd ec2-user
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT5M     
+        Timeout: PT7M
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
