@@ -1,0 +1,309 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudBD Region Template:
+  This template configures a region with an S3 bucket, VPC with S3 endpoint and
+  a IAM user with access to the bucket for testing CloudBD disks.'
+Parameters:
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+Mappings:
+  AvailabilityZones:
+    us-east-1: 
+      a: us-east-1a
+      b: us-east-1b
+      c: us-east-1c
+      d: us-east-1d
+      e: us-east-1e
+      f: us-east-1f
+    us-east-2:
+      a: us-east-2a
+      b: us-east-2b
+      c: us-east-2c
+      d: false
+      e: false
+      f: false
+    us-west-1:
+      a: us-west-1a
+      b: us-west-1b
+      c: false
+      d: false
+      e: false
+      f: false
+    us-west-2:
+      a: us-west-2a
+      b: us-west-2b
+      c: us-west-2c
+      d: false
+      e: false
+      f: false
+    ca-central-1:
+      a: ca-central-1a
+      b: ca-central-1b
+      c: false
+      d: false
+      e: false
+      f: false
+    eu-central-1:
+      a: eu-central-1a
+      b: eu-central-1b
+      c: eu-central-1c
+      d: false
+      e: false
+      f: false
+    eu-west-1:
+      a: eu-west-1a
+      b: eu-west-1b
+      c: eu-west-1c
+      d: false
+      e: false
+      f: false
+    eu-west-2:
+      a: eu-west-2a
+      b: eu-west-2b
+      c: eu-west-2c
+      d: false
+      e: false
+      f: false
+    eu-west-3:
+      a: eu-west-3a
+      b: eu-west-3b
+      c: eu-west-3c
+      d: false
+      e: false
+      f: false
+    ap-northeast-1:
+      a: ap-northeast-1a
+      b: false
+      c: ap-northeast-1c
+      d: ap-northeast-1d
+      e: false
+      f: false
+    ap-northeast-2:
+      a: ap-northeast-2a
+      b: false
+      c: ap-northeast-2c
+      d: false
+      e: false
+      f: false
+    ap-south-1:
+      a: ap-south-1a
+      b: ap-south-1b
+      c: false
+      d: false
+      e: false
+      f: false
+    ap-southeast-1:
+      a: ap-southeast-1a
+      b: ap-southeast-1b
+      c: ap-southeast-1c
+      d: false
+      e: false
+      f: false
+    ap-southeast-2:
+      a: ap-southeast-2a
+      b: ap-southeast-2b
+      c: ap-southeast-2c
+      d: false
+      e: false
+      f: false
+    sa-east-1:
+      a: sa-east-1a
+      b: false
+      c: sa-east-1c
+      d: false
+      e: false
+      f: false
+Conditions:
+  AvailabilityZoneA:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", a], false]]
+  AvailabilityZoneB:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", b], false]]
+  AvailabilityZoneC:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", c], false]]
+  AvailabilityZoneD:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", d], false]]
+  AvailabilityZoneE:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", e], false]]
+  AvailabilityZoneF:
+    !Not [!Equals [!FindInMap [AvailabilityZones, !Ref "AWS::Region", f], false]]
+Resources:
+  CloudBDS3Bucket:
+    Type: AWS::S3::Bucket
+  CloudBDTestUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: cloudbd-test-user-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource:
+                  - Fn::GetAtt: [ "CloudBDS3Bucket", "Arn" ]
+              - Effect: Allow
+                Action:
+                  - s3:HeadBucket
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:DeleteObject
+                Resource:
+                  - Fn::Join:
+                    - ""
+                    -
+                      - Fn::GetAtt: [ "CloudBDS3Bucket", "Arn" ]
+                      - "/cloudbd/*"
+  CloudBDVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+  CloudBDInternetGateway:
+    Type: AWS::EC2::InternetGateway
+  CloudBDGatewayAtachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref CloudBDVPC
+      InternetGatewayId: !Ref CloudBDInternetGateway
+  CloudBDRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties: 
+      VpcId: !Ref CloudBDVPC
+  CloudBDDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: CloudBDGatewayAtachment
+    Properties:
+      RouteTableId: !Ref CloudBDRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref CloudBDInternetGateway
+  CloudBDSubnetA:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneA
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", a]
+      CidrBlock: 172.16.0.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetAAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneA
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetA
+  CloudBDSubnetB:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneB
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", b]
+      CidrBlock: 172.16.80.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetBAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneB
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetB
+  CloudBDSubnetC:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneC
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", c]
+      CidrBlock: 172.16.16.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetCAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneC
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetC
+  CloudBDSubnetD:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneD
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", d]
+      CidrBlock: 172.16.32.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetDAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneD
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetD
+  CloudBDSubnetE:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneE
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", e]
+      CidrBlock: 172.16.64.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetEAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneE
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetE
+  CloudBDSubnetF:
+    Type: AWS::EC2::Subnet
+    Condition: AvailabilityZoneF
+    Properties:
+      AvailabilityZone: !FindInMap [AvailabilityZones, !Ref "AWS::Region", f]
+      CidrBlock: 172.16.48.0/20
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref CloudBDVPC
+  CloudBDSubnetFAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: AvailabilityZoneF
+    Properties: 
+      RouteTableId: !Ref CloudBDRouteTable
+      SubnetId: !Ref CloudBDSubnetF
+  CloudBDS3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref CloudBDVPC
+      RouteTableIds:
+        - !Ref CloudBDRouteTable
+      ServiceName:
+        Fn::Join:
+          - '.'
+          -
+            - com.amazonaws
+            - !Ref AWS::Region
+            - s3
+  CloudBDSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access via port 22
+      VpcId: !Ref CloudBDVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: !Ref SSHLocation
+Outputs:
+  BucketName:
+    Description: Name of the CloudBD test bucket
+    Value: !Ref CloudBDS3Bucket
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", BucketName ] ]
+  UserName:
+    Description: Name of the CloudBD test user
+    Value: !Ref CloudBDTestUser
+  SecurityGroup:
+    Description: CloudBD Security Group Ref
+    Value: !Ref CloudBDSecurityGroup
+    Export:
+      Name: !Join [ "-", [ !Ref "AWS::StackName", SecurityGroup ] ]

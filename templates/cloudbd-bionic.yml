@@ -1,0 +1,434 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudBD Ubuntu 18.04/bionic Template:
+  This template creates and configures an EC2 instance using the VPC,
+  S3 Bucket, IAM user and SSH key-pair from the regional template.'
+Parameters:
+  InstanceName:
+    Description: The Ubuntu 18.04/bionic unique name of the instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '32'
+    AllowedPattern: "[a-zA-Z][a-zA-Z_0-9-]*"
+    ConstraintDescription: must start with an alphabetic character and contain only alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  CredentialsURL:
+    Description: Presigned URL to credentials.json
+    Type: String
+    Default: ""
+  RemoteConfURL:
+    Description: Presigned URL to remotes.d conf file
+    Type: String
+    Default: ""
+  InstanceType:
+    Description: CloudBD Ubuntu 18.04/bionic EC2 instance type
+    Type: String
+    AllowedValues:
+    - t1.micro
+    - t2.nano
+    - t2.micro
+    - t2.small
+    - t2.medium
+    - t2.large
+    - m1.small
+    - m1.medium
+    - m1.large
+    - m1.xlarge
+    - m2.xlarge
+    - m2.2xlarge
+    - m2.4xlarge
+    - m3.medium
+    - m3.large
+    - m3.xlarge
+    - m3.2xlarge
+    - m4.large
+    - m4.xlarge
+    - m4.2xlarge
+    - m4.4xlarge
+    - m4.10xlarge
+    - c1.medium
+    - c1.xlarge
+    - c3.large
+    - c3.xlarge
+    - c3.2xlarge
+    - c3.4xlarge
+    - c3.8xlarge
+    - c4.large
+    - c4.xlarge
+    - c4.2xlarge
+    - c4.4xlarge
+    - c4.8xlarge
+    - g2.2xlarge
+    - g2.8xlarge
+    - r3.large
+    - r3.xlarge
+    - r3.2xlarge
+    - r3.4xlarge
+    - r3.8xlarge
+    - i2.xlarge
+    - i2.2xlarge
+    - i2.4xlarge
+    - i2.8xlarge
+    - d2.xlarge
+    - d2.2xlarge
+    - d2.4xlarge
+    - d2.8xlarge
+    - hi1.4xlarge
+    - hs1.8xlarge
+    - cr1.8xlarge
+    - cc2.8xlarge
+    - cg1.4xlarge
+    - m5.large
+    - m5.xlarge
+    - m5.2xlarge
+    - m5.4xlarge
+    - m5.12xlarge
+    - m5.24xlarge
+    - i3.large
+    - i3.xlarge
+    - i3.2xlarge
+    - i3.4xlarge
+    - i3.8xlarge
+    - i3.16xlarge
+    - h1.2xlarge
+    - h1.4xlarge
+    - h1.8xlarge
+    - h1.16xlarge
+    ConstraintDescription: must be a valid EC2 instance type.
+  AvailabilityZone:
+    Description: The Availability Zone letter to create the EC2 instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '1'
+    AllowedPattern: "[a-f]"
+    ConstraintDescription: must be a single character in the range a-f
+Mappings:
+  AWSInstanceType2Arch:
+    t1.micro:
+      Arch: HVM64
+    t2.nano:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+    m1.small:
+      Arch: HVM64
+    m1.medium:
+      Arch: HVM64
+    m1.large:
+      Arch: HVM64
+    m1.xlarge:
+      Arch: HVM64
+    m2.xlarge:
+      Arch: HVM64
+    m2.2xlarge:
+      Arch: HVM64
+    m2.4xlarge:
+      Arch: HVM64
+    m3.medium:
+      Arch: HVM64
+    m3.large:
+      Arch: HVM64
+    m3.xlarge:
+      Arch: HVM64
+    m3.2xlarge:
+      Arch: HVM64
+    m4.large:
+      Arch: HVM64
+    m4.xlarge:
+      Arch: HVM64
+    m4.2xlarge:
+      Arch: HVM64
+    m4.4xlarge:
+      Arch: HVM64
+    m4.10xlarge:
+      Arch: HVM64
+    c1.medium:
+      Arch: HVM64
+    c1.xlarge:
+      Arch: HVM64
+    c3.large:
+      Arch: HVM64
+    c3.xlarge:
+      Arch: HVM64
+    c3.2xlarge:
+      Arch: HVM64
+    c3.4xlarge:
+      Arch: HVM64
+    c3.8xlarge:
+      Arch: HVM64
+    c4.large:
+      Arch: HVM64
+    c4.xlarge:
+      Arch: HVM64
+    c4.2xlarge:
+      Arch: HVM64
+    c4.4xlarge:
+      Arch: HVM64
+    c4.8xlarge:
+      Arch: HVM64
+    r3.large:
+      Arch: HVM64
+    r3.xlarge:
+      Arch: HVM64
+    r3.2xlarge:
+      Arch: HVM64
+    r3.4xlarge:
+      Arch: HVM64
+    r3.8xlarge:
+      Arch: HVM64
+    i2.xlarge:
+      Arch: HVM64
+    i2.2xlarge:
+      Arch: HVM64
+    i2.4xlarge:
+      Arch: HVM64
+    i2.8xlarge:
+      Arch: HVM64
+    d2.xlarge:
+      Arch: HVM64
+    d2.2xlarge:
+      Arch: HVM64
+    d2.4xlarge:
+      Arch: HVM64
+    d2.8xlarge:
+      Arch: HVM64
+    hi1.4xlarge:
+      Arch: HVM64
+    hs1.8xlarge:
+      Arch: HVM64
+    cr1.8xlarge:
+      Arch: HVM64
+    cc2.8xlarge:
+      Arch: HVM64
+    m5.large:
+      Arch: HVM64
+    m5.xlarge:
+      Arch: HVM64
+    m5.2xlarge:
+      Arch: HVM64
+    m5.4xlarge:
+      Arch: HVM64
+    m5.12xlarge:
+      Arch: HVM64
+    m5.24xlarge:
+      Arch: HVM64
+    i3.large:
+      Arch: HVM64
+    i3.xlarge:
+      Arch: HVM64
+    i3.2xlarge:
+      Arch: HVM64
+    i3.4xlarge:
+      Arch: HVM64
+    i3.8xlarge:
+      Arch: HVM64
+    i3.16xlarge:
+      Arch: HVM64
+    h1.2xlarge:
+      Arch: HVM64
+    h1.4xlarge:
+      Arch: HVM64
+    h1.8xlarge:
+      Arch: HVM64
+    h1.16xlarge:
+      Arch: HVM64
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-0977029b5b13f3d08
+    us-west-2:
+      HVM64: ami-0f47ef92b4218ec09
+    us-west-1:
+      HVM64: ami-03d5270fcb641f79b
+    eu-west-1:
+      HVM64: ami-0aebeb281fdee5054
+    eu-west-2:
+      HVM64: ami-03f2ee00e9dc6b85f
+    eu-west-3:
+      HVM64: ami-0a2ca21adb4a04084
+    eu-central-1:
+      HVM64: ami-0dfd7cad24d571c54
+    ap-northeast-1:
+      HVM64: ami-033cdfcdd17e140cc
+    ap-northeast-2:
+      HVM64: ami-0b04c9bf8abfa5b89
+    ap-southeast-1:
+      HVM64: ami-012e97ef137a3f446
+    ap-southeast-2:
+      HVM64: ami-0b1f854598cf629f6
+    ap-south-1:
+      HVM64: ami-0807bb2b5888ad68c
+    us-east-2:
+      HVM64: ami-05f39e7b7f153bc6a
+    ca-central-1:
+      HVM64: ami-01428c87658222f33
+    sa-east-1:
+      HVM64: ami-0389698ad66808197
+Resources:
+  CloudBDBionicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub 'cloudbd-regional-${AWS::Region}-SecurityGroup'
+      SubnetId:
+        Fn::ImportValue: !Join [ '', ['cloudbd-regional-', !Ref 'AWS::Region', '-subnet-', !Ref AvailabilityZone ] ]
+      KeyName: !Ref KeyName
+      ImageId:
+        Fn::FindInMap:
+        - AWSRegionArch2AMI
+        - !Ref AWS::Region
+        - Fn::FindInMap:
+          - AWSInstanceType2Arch
+          - !Ref InstanceType
+          - Arch
+      Tags:
+        -
+          Key: Name
+          Value: !Join [ '-', ['cloudbd-bionic', !Ref 'AWS::Region', !Ref InstanceName ] ]
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -x
+            export DEBIAN_FRONTEND=noninteractive
+
+            # apt frequently gets stuck when using ipv6
+            sysctl -w net.ipv6.conf.all.disable_ipv6=1
+            sysctl -w net.ipv6.conf.default.disable_ipv6=1
+
+            # upgrade packages and kernel
+            apt-get update
+            apt-get -y dist-upgrade
+
+            # install cfn bootstrap package
+            apt-get -y install python-pip
+            pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+
+            # perform AWS::CloudFormation::Init tasks
+            /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDBionicInstance --configsets default --region ${AWS::Region}
+
+            # reboot if needed and signal completion to cloudfront
+            RET=$?
+            if [ -e /var/run/reboot-required ]; then
+              cat <<- EOF > /etc/cron.d/cfn-signal
+            	SHELL=/bin/bash
+            	PATH=/sbin:/bin:/usr/sbin:/usr/bin
+            	MAILTO=root
+            	HOME=/
+            	@reboot root { /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDBionicInstance --region ${AWS::Region}; rm /etc/cron.d/cfn-signal; } > /dev/null
+            	EOF
+              reboot
+            else
+              /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDBionicInstance --region ${AWS::Region}
+            fi
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - CfnHupInstall
+            - RepoInstall
+            - Install
+        CfnHupInstall:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackName}
+                region=${AWS::Region}
+                interval=1
+                verbose=true
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.CloudBDBionicInstance.Metadata
+                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDBionicInstance --configsets default --region ${AWS::Region}
+                runas=root
+              mode: "000400"
+              owner: "root"
+              group: "root"
+            /etc/systemd/system/cfn-hup.service:
+              content: !Sub |
+                [Unit]
+                Description=Cloud formation helper daemon
+
+                [Service]
+                ExecStart=/usr/local/bin/cfn-hup
+                Restart=always
+                Type=simple
+
+                [Install]
+                WantedBy=multi-user.target
+          commands:
+            01-install-cfn-hup:
+              command: !Sub |
+                set -xe
+                systemctl enable cfn-hup.service
+                systemctl start cfn-hup.service
+        RepoInstall:
+          files:
+            /etc/apt/sources.list.d/cloudbd.list:
+              source: https://repo.cloudbd.io/bionic/cloudbd.list
+              mode: "000644"
+              owner: "root"
+              group: "root"
+            /usr/share/keyrings/cloudbd-keyring.gpg:
+              source: https://repo.cloudbd.io/cloudbd-keyring.gpg
+              mode: "000644"
+              owner: "root"
+              group: "root"
+          commands:
+            01-apt-update:
+              command: !Sub |
+                set -xe
+                apt-get update
+        Install:
+          commands:
+            01-packages:
+              command: !Sub |
+                set -xe
+                apt-get install -y cbd-client
+            02-remote-conf:
+              command: !Sub
+                - |
+                  set -xe
+                  ConfURL="${ConfURL}"
+                  ConfFile="${ConfFile}"
+                  if [ -n "${!ConfURL}" ] && [ ! -f ${!ConfFile} ]; then
+                    umask 027;
+                    wget -qO ${!ConfFile} ${!ConfURL}
+                    chown root:cloudbd ${!ConfFile}
+                  fi
+                - ConfURL: !Ref RemoteConfURL
+                  ConfFile: !Sub '/etc/cloudbd/remotes.d/${AWS::Region}.conf'
+            03-creds:
+              command: !Sub
+                - |
+                  set -xe
+                  ConfURL="${ConfURL}"
+                  ConfFile="${ConfFile}"
+                  if [ -n "${!ConfURL}" ] && [ ! -f ${!ConfFile} ]; then
+                    umask 027;
+                    wget -qO ${!ConfFile} ${!ConfURL}
+                    chown root:cloudbd ${!ConfFile}
+                  fi
+                - ConfURL: !Ref CredentialsURL
+                  ConfFile: /etc/cloudbd/credentials.json
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT5M     
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref CloudBDBionicInstance
