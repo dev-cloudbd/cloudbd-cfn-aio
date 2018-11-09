@@ -51,7 +51,7 @@ validate_profile() {
   if [[ "$1" == "default" ]]; then
     grep -q "\[default\]" ~/.aws/config
   else
-    grep -q "\[profile ${CBD_PROFILE_NEW}\]" ~/.aws/config
+    grep -q "\[profile $1\]" ~/.aws/config
   fi
   return $?;
 }
@@ -244,7 +244,7 @@ get_stack_outputs() {
     --query 'Stacks[0].Outputs[*].{Key:OutputKey, Value:OutputValue}' \
     --output text)
   if [ $? -ne 0 ]; then
-    echo "Failed to query stack outputs"
+    echo "cfn-aio: error: failed to query stack outputs"
     exit 1
   fi
 }
@@ -691,7 +691,15 @@ create_region() {
   local CBD_SSH_KEY_FILE="./config/cloudbd-${CBD_REGION}-key.pem"
   local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
 
-  if [ ! -f ${CBD_SSH_KEY_FILE} ]; then
+  if aws ec2 describe-key-pairs \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --key-name ${CBD_SSH_KEY_NAME} >/dev/null 2>&1; then
+    echo "EC2 key-pair ${CBD_SSH_KEY_NAME} already exists, using existing key-pair."
+    if [ ! -f ${CBD_SSH_KEY_FILE} ]; then
+      echo "WARNING: Missing EC2 key-pair file ${CBD_SSH_KEY_FILE}. This file is needed for SSH access to EC2 nodes."
+    fi
+  else
     umask 077;
     if aws ec2 create-key-pair \
       --profile ${CBD_PROFILE} \
@@ -746,7 +754,7 @@ create_region() {
 	secret_key = ${SecretKey}
 	EOF
 
-  echo "Created cloudbd configuration file ${CBD_REGION}.conf"
+  echo "Created CloudBD configuration file ${CBD_REGION}.conf"
 
   aws s3 cp \
     --profile ${CBD_PROFILE} \
@@ -859,12 +867,19 @@ delete_region() {
   get_stack_outputs cloudbd-regional-${CBD_REGION}
   local BucketName=$(grep BucketName <<< "${Outputs}" | awk '{print $2}')
 
-  if aws s3 ls \
+  # if stack failed to create the bucket, then skip checking for undeleted disks
+  # and the config removal
+  if [[ -n ${BucketName} ]] && aws s3api head-bucket \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
     --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-    s3://${BucketName}/cloudbd/ > /dev/null; then
-    cat <<- EOF
+    --bucket ${BucketName} >/dev/null 2>&1 ; then
+    if aws s3 ls \
+      --profile ${CBD_PROFILE} \
+      --region ${CBD_REGION} \
+      --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
+      s3://${BucketName}/cloudbd/ > /dev/null; then
+      cat <<- EOF
 	ERROR: Can not delete regional resources while CloudBD disks remain
 	configured. Please delete your CloudBD disks before deleting your
 	regional resources using a CloudBD EC2 instance.
@@ -881,20 +896,21 @@ delete_region() {
 	When all disks have been stopped and deleted you can delete the
 	CloudBD instance and regional resources.
 	EOF
-    exit 1
+      exit 1
+    fi
+
+    aws s3 rm  \
+      --profile ${CBD_PROFILE} \
+      --region ${CBD_REGION} \
+      --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
+      s3://${BucketName}/config/credentials.json > /dev/null
+
+    aws s3 rm \
+      --profile ${CBD_PROFILE} \
+      --region ${CBD_REGION} \
+      --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
+      s3://${BucketName}/config/${CBD_REGION}.conf > /dev/null
   fi
-
-  aws s3 rm  \
-    --profile ${CBD_PROFILE} \
-    --region ${CBD_REGION} \
-    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-    s3://${BucketName}/config/credentials.json > /dev/null
-
-  aws s3 rm \
-    --profile ${CBD_PROFILE} \
-    --region ${CBD_REGION} \
-    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-    s3://${BucketName}/config/${CBD_REGION}.conf > /dev/null
 
   echo "Deleting CloudFormation stack cloudbd-regional-${CBD_REGION}"
 
@@ -908,18 +924,27 @@ delete_region() {
   echo "Deleted stack cloudbd-regional-${CBD_REGION}"
 
   if [ -f ./config/${CBD_REGION}.conf ]; then
-    rm ./config/${CBD_REGION}.conf && echo "Deleted ./config/${CBD_REGION}.conf"
+    rm ./config/${CBD_REGION}.conf && echo "Deleted file ./config/${CBD_REGION}.conf"
   fi
 
-  if [ -f "${CBD_SSH_KEY_FILE}" ]; then
+  if aws ec2 describe-key-pairs \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --key-name ${CBD_SSH_KEY_NAME} >/dev/null 2>&1; then
     if aws ec2 delete-key-pair \
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
-      --key-name ${CBD_SSH_KEY_NAME} \
-      && rm ${CBD_SSH_KEY_FILE}; then
-      echo "Deleted key pair ${CBD_SSH_KEY_NAME}"
+      --key-name ${CBD_SSH_KEY_NAME}; then
+      echo "Deleted EC2 key pair ${CBD_SSH_KEY_NAME}"
+      if [ -f "${CBD_SSH_KEY_FILE}" ]; then
+        rm ${CBD_SSH_KEY_FILE} && echo "Deleted file ${CBD_SSH_KEY_FILE}"
+      fi
     else
       echo "Failed to delete key pair ${CBD_SSH_KEY_NAME}"
+    fi
+  else
+    if [ -f "${CBD_SSH_KEY_FILE}" ]; then
+      rm ${CBD_SSH_KEY_FILE} && echo "Deleted file ${CBD_SSH_KEY_FILE}"
     fi
   fi
 }
@@ -1216,6 +1241,11 @@ create_instance() {
 
   get_stack_outputs cloudbd-regional-${CBD_REGION}
   local BucketName=$(grep BucketName <<< "${Outputs}" | awk '{print $2}')
+
+  if [[ ! -n ${BucketName} ]]; then
+    echo "cfn-aio: error: missing required region bucket: probably due to create-region failure"
+    exit 1
+  fi
 
   local CredentialsURL="$(aws s3 presign \
     --profile ${CBD_PROFILE} \
