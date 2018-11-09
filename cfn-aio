@@ -32,7 +32,7 @@ fi
 
 # default values for unconfigured use
 CBD_PROFILE="${CBD_PROFILE:-default}"
-CBD_REGION="${CBD_REGION:-us-east-1}"
+CBD_REGION="${CBD_REGION:-us-east-2}"
 CBD_AVAILABILITY_ZONE="${CBD_AVAILABILITY_ZONE:-a}"
 CBD_SSH_CIDR_RANGE="${CBD_SSH_CIDR_RANGE:-0.0.0.0/0}"
 CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE:-t2.micro}"
@@ -73,6 +73,35 @@ validate_availability_zone() {
   local REGEX='^[a-f]$'
   [[ $1 =~ $REGEX ]]
   return $?
+}
+
+check_availability_zone() {
+  local ZoneName=$(aws ec2 describe-availability-zones \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --filters Name=zone-name,Values=${CBD_REGION}$1 \
+    --query "AvailabilityZones[].ZoneName" \
+    --output text)
+  [[ $? -eq 0 ]] && [[ -n ${ZoneName} ]]
+  return $?
+}
+
+build_all_availability_zones() {
+  local AllZones=$(aws ec2 describe-availability-zones \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --query "AvailabilityZones[].ZoneName" \
+    --output text)
+  CBD_ALL_AVAILABILITY_ZONES=""
+  local COMMA=""
+  for ZONE in {a..f}; do
+    if grep -q ${CBD_REGION}${ZONE} <<< "${AllZones}"; then
+      CBD_ALL_AVAILABILITY_ZONES="${CBD_ALL_AVAILABILITY_ZONES}${COMMA}${CBD_REGION}${ZONE}"
+    else
+      CBD_ALL_AVAILABILITY_ZONES="${CBD_ALL_AVAILABILITY_ZONES}${COMMA}false"
+    fi
+    COMMA=","
+  done
 }
 
 validate_os() {
@@ -609,7 +638,7 @@ create_region_help() {
 	   EC2 VPC - This VPC is created with an S3 endpoint and other
 	   associated resources needed for CloudBD EC2 instances. EC2 instances
 	   created via the create-instance command use this VPC. The VPC
-	   includes Subnets for all availablity zones in the region, an
+	   includes Subnets for all availability zones in the region, an
 	   InternetGateway, an S3 VPCEndpoint, Routing Table and attachments.
 	   See the regional template for details.
 
@@ -688,6 +717,8 @@ create_region() {
 
   check_credentials
 
+  build_all_availability_zones
+
   local CBD_SSH_KEY_FILE="./config/cloudbd-${CBD_REGION}-key.pem"
   local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
 
@@ -723,7 +754,8 @@ create_region() {
     --stack-name cloudbd-regional-${CBD_REGION} \
     --capabilities CAPABILITY_IAM \
     --parameters \
-        ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} > /dev/null
+        ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} \
+        ParameterKey=AvailabilityZones,ParameterValue=\"${CBD_ALL_AVAILABILITY_ZONES}\" > /dev/null
 
   [ $? -eq 0 ] && cloudformation_tail cloudbd-regional-${CBD_REGION} || exit $?
 
@@ -878,6 +910,7 @@ delete_region() {
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
       --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
+      --recursive \
       s3://${BucketName}/cloudbd/ > /dev/null; then
       cat <<- EOF
 	ERROR: Can not delete regional resources while CloudBD disks remain
@@ -1178,7 +1211,7 @@ create_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --availability-zone: Invalid zone letter provided.
 
-		Availablity zone must be a letter in the range a-f.
+		Availability zone must be a letter in the range a-f.
 		EOF
           exit 1
         fi
@@ -1234,6 +1267,11 @@ create_instance() {
 
   if [[ ! -n ${CBD_EC2_NAME} ]]; then
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
+  fi
+
+  if ! check_availability_zone ${CBD_AVAILABILITY_ZONE}; then
+    echo "cfn-aio: error: availability zone invalid; availability zone ${CBD_AVAILABILITY_ZONE} in region ${CBD_REGION} is not available"
+    exit 1
   fi
 
   local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
@@ -1421,7 +1459,7 @@ update_instance_help() {
 	Description:
 	   The update-instance command updates an instance previouly created
 	   via the create-instance command. This command can be used to modify
-	   the availablity zone or instance type  of an existing instance or to
+	   the availability zone or instance type  of an existing instance or to
 	   update the instance should changes be made to the instance template.
 
 	   The instance is updated by issuing an 'aws cloudformation
@@ -1528,7 +1566,7 @@ update_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --availability-zone: Invalid zone letter provided.
 
-		Availablity zone must be a letter in the range a-f.
+		Availability zone must be a letter in the range a-f.
 		EOF
           exit 1
         fi
