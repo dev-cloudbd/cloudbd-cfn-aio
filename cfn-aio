@@ -751,11 +751,13 @@ create_region() {
   aws s3 cp \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     config/${CBD_REGION}.conf s3://${BucketName}/config/${CBD_REGION}.conf
 
   aws s3 cp \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     config/credentials.json s3://${BucketName}/config/credentials.json
 
   echo "${CBD_REGION} created successfully."
@@ -860,6 +862,7 @@ delete_region() {
   if aws s3 ls \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     s3://${BucketName}/cloudbd/ > /dev/null; then
     cat <<- EOF
 	ERROR: Can not delete regional resources while CloudBD disks remain
@@ -884,11 +887,13 @@ delete_region() {
   aws s3 rm  \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     s3://${BucketName}/config/credentials.json > /dev/null
 
   aws s3 rm \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     s3://${BucketName}/config/${CBD_REGION}.conf > /dev/null
 
   echo "Deleting CloudFormation stack cloudbd-regional-${CBD_REGION}"
@@ -1216,12 +1221,14 @@ create_instance() {
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
     --expires-in 600 \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     s3://${BucketName}/config/credentials.json)"
 
   local RemoteConfURL="$(aws s3 presign \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
     --expires-in 600 \
+    --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     s3://${BucketName}/config/${CBD_REGION}.conf)"
 
   echo "Creating CloudFormation stack ${EC2_STACK_NAME}"
