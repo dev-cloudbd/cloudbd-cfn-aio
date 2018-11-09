@@ -340,7 +340,7 @@ configure_help() {
 
 	   CBD_REGION - This is the AWS region that will be used by default when
 	   creating, deleting, or updating resources. The default value when
-	   unconfigured is "us-east-1".
+	   unconfigured is "us-east-2".
 
 	   CBD_AVAILABILITY_ZONE - This is the availability zone letter in the
 	   CBD_REGION that will be used by default when creating EC2 instances
