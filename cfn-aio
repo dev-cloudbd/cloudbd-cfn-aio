@@ -985,7 +985,7 @@ delete_region() {
 update_region_help() {
   cat <<- EOF
 	Usage:
-	   cfn-aio update-region [options]
+	   cfn-aio update-region --ssh-cidr <cidr range> [options]
 
 	Description:
 	   The update-region command updates previously created AWS resources
@@ -999,6 +999,13 @@ update_region_help() {
 	   command help.
 
 	Options:
+	   Required options:
+
+	   --ssh-cidr <cidr range>
+	   	The SSH Cidr address range that is allowed to SSH into EC2
+	   	instances. The '0.0.0.0/0' value does not limit SSH source
+	   	addresses.
+
 	   When options are provided they override the default configured values
 	   that were set with the configure command. When an option is not
 	   provided the default configured value will be used.
@@ -1008,11 +1015,6 @@ update_region_help() {
 
 	   --region <AWS region>
 	   	The region to update CloudBD regional resources in.
-
-	   --ssh-cidr <cidr range>
-	   	The SSH Cidr address range that is allowed to SSH into EC2
-	   	instances. The '0.0.0.0/0' value does not limit SSH source
-	   	addresses.
 	EOF
   exit 0
 }
@@ -1048,7 +1050,7 @@ update_region() {
         ;;
       --ssh-cidr)
 	if validate_cidr "$2"; then
-          CBD_SSH_CIDR_RANGE="$2"; shift 2;
+          CBD_SSH_CIDR_RANGE_NEW="$2"; shift 2;
         else
 	  echo "cfn-aio: error: argument --ssh-cidr: Invalid ssh cidr range provied."
           exit 1
@@ -1066,6 +1068,14 @@ update_region() {
     esac
   done
 
+  if [[ ! -n ${CBD_SSH_CIDR_RANGE_NEW} ]]; then
+    usage_exit "cfn-aio: error: argument --ssh-cidr: Missing required argument --ssh-cidr"
+  fi
+
+  CBD_SSH_CIDR_RANGE=${CBD_SSH_CIDR_RANGE_NEW}
+
+  build_all_availability_zones
+
   echo "Updating CloudFormation stack cloudbd-regional-${CBD_REGION}"
 
   aws cloudformation update-stack \
@@ -1075,7 +1085,8 @@ update_region() {
     --stack-name cloudbd-regional-${CBD_REGION} \
     --capabilities CAPABILITY_IAM \
     --parameters \
-        ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} > /dev/null
+        ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} \
+        ParameterKey=AvailabilityZones,ParameterValue=\"${CBD_ALL_AVAILABILITY_ZONES}\" > /dev/null
 
   [ $? -eq 0 ] && cloudformation_tail cloudbd-regional-${CBD_REGION} || exit $?
 }
@@ -1454,13 +1465,13 @@ delete_instance() {
 update_instance_help() {
   cat <<- EOF
 	Usage:
-	   cfn-aio update-instance --name <instance name> [options]
+	   cfn-aio update-instance --name <instance name> --instance-type <type> [options]
 
 	Description:
 	   The update-instance command updates an instance previouly created
 	   via the create-instance command. This command can be used to modify
-	   the availability zone or instance type  of an existing instance or to
-	   update the instance should changes be made to the instance template.
+	   the instance type of an existing instance or to update the instance
+	   should changes be made to the instance template.
 
 	   The instance is updated by issuing an 'aws cloudformation
 	   update-stack' command. The AWS cli profile must have the rights to
@@ -1477,6 +1488,9 @@ update_instance_help() {
 	   	contain alpha-numeric characters and hyphens only. 32
 	   	characters max.
 
+	   --instance-type <type>
+	   	The EC2 instance type. e.g. t2.micro, m5.large, etc.
+
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
 	   option is not provided the default configured value will be used:
@@ -1486,13 +1500,6 @@ update_instance_help() {
 
 	   --region <AWS region>
 	   	The region with the CloudBD EC2 instance.
-
-	   --availability-zone <zone letter>
-	   	The availability zone letter in the region. Must be a-f and be
-	   	valid for the region.
-
-	   --instance-type <type>
-	   	The EC2 instance type. e.g. t2.micro, m5.large, etc.
 
 	   --os <os>
 	   	The operating system to use for the EC2 instance. Supported
@@ -1559,21 +1566,9 @@ update_instance() {
           exit 1
         fi
         ;;
-      --availability-zone)
-	if validate_availability_zone "$2"; then
-          CBD_AVAILABILITY_ZONE="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --availability-zone: Invalid zone letter provided.
-
-		Availability zone must be a letter in the range a-f.
-		EOF
-          exit 1
-        fi
-        ;;
       --instance-type)
 	if validate_instance_type "$2"; then
-          CBD_EC2_INSTANCE_TYPE="$2"; shift 2;
+          CBD_EC2_INSTANCE_TYPE_NEW="$2"; shift 2;
         else
           cat <<- EOF
 		cfn-aio: error: argument --instance-type: Invalid instance type provided.
@@ -1624,8 +1619,34 @@ update_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
+  if [[ ! -n ${CBD_EC2_INSTANCE_TYPE_NEW} ]]; then
+    usage_exit "cfn-aio: error: argument --instance-type: Missing required argument --instance-type"
+  fi
+
+  CBD_EC2_INSTANCE_TYPE=${CBD_EC2_INSTANCE_TYPE_NEW}
+
   local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
   local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
+
+  get_stack_outputs ${EC2_STACK_NAME}
+  local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
+
+  if [[ ! -n ${InstanceId} ]]; then
+    echo "cfn-aio: error: instance id: Unable to query instance id"
+    exit 1
+  fi
+
+  local Zone=$(aws ec2 describe-instances \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --instance-ids ${InstanceId} \
+    --query 'Reservations[].Instances[].Placement.AvailabilityZone' \
+    --output text)
+
+  if [[ ! -n ${Zone} ]]; then
+    echo "cfn-aio: error: availability zone: Unable to query availability zone"
+    exit 1
+  fi
 
   echo "Updating CloudFormation stack ${EC2_STACK_NAME}"
 
@@ -1638,7 +1659,7 @@ update_instance() {
         ParameterKey=InstanceName,ParameterValue=${CBD_EC2_NAME} \
         ParameterKey=KeyName,ParameterValue=${CBD_SSH_KEY_NAME} \
         ParameterKey=InstanceType,ParameterValue=${CBD_EC2_INSTANCE_TYPE} \
-        ParameterKey=AvailabilityZone,ParameterValue=${CBD_AVAILABILITY_ZONE} > /dev/null
+        ParameterKey=AvailabilityZone,ParameterValue=${Zone: -1} > /dev/null
 
   [ $? -eq 0 ] && cloudformation_tail ${EC2_STACK_NAME} || exit $?
 }
