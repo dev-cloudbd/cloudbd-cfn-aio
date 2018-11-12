@@ -113,7 +113,7 @@ validate_os() {
   esac
 }
 
-validate_instance_type() {
+check_instance_type() {
   case "$1" in
     t1.micro)
       return 0;;
@@ -158,7 +158,13 @@ validate_instance_type() {
     h1.2xlarge|h1.4xlarge|h1.8xlarge|h1.16xlarge)
       return 0;;
     *)
-      return 1;;
+      # using a fixed region of us-east-1 since aws pricing does not work in all regions
+      aws pricing get-attribute-values \
+        --profile ${CBD_PROFILE} \
+        --region us-east-1 \
+        --service-code AmazonEC2 \
+        --attribute-name instanceType | grep -q "$1"
+      return $?;;
   esac
 }
 
@@ -234,9 +240,11 @@ cloudformation_tail() {
       --output text 2>/dev/null)
   done
 
+  local CompletionTime=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ")
+
   if [ -n "${deleting}" ]; then
     if [ "$stackStatus" = "DELETE_COMPLETE" ]; then
-      echo "Stack Status: DELETE_COMPLETE"
+      echo "${CompletionTime}    DELETE_COMPLETE"
       return 0
     fi
 
@@ -248,21 +256,18 @@ cloudformation_tail() {
       --output text 2>&1)
     # expecting the command to fail if the complete stack was deleted
     if [ $? -ne 0 ] && grep -q "does not exist" <<< "$stackError"; then
-      echo "Stack Status: DELETE_COMPLETE"
+      echo "${CompletionTime}    DELETE_COMPLETE"
       return 0
     else
-      echo "Stack Staus: DELETE_FAILED ($stackStatus)"
+      echo "${CompletionTime}    DELETE_FAILED ($stackStatus)"
       return 1
     fi
   fi
 
-  echo "Stack Status: $stackStatus"
-  if [ "$stackStatus" = "CREATE_COMPLETE" ] \
-    || [ "$stackStatus" = "UPDATE_COMPLETE" ]; then
-    return 0
-  else
-    return 1
-  fi
+  echo "${CompletionTime}    $stackStatus"
+
+  [ "$stackStatus" = "CREATE_COMPLETE" ] || [ "$stackStatus" = "UPDATE_COMPLETE" ]
+  return $?
 }
 
 get_stack_outputs() {
@@ -381,7 +386,7 @@ configure_help() {
 	   --instance-type <type>
 	   	Set the default EC2 instance type.
 
-	   --os <os>
+	   --os <os name>
 	   	Set the default operating system for EC2 instances.
 	EOF
   exit 0
@@ -413,7 +418,7 @@ configure() {
 	--availability-zone <zone letter>
 	--ssh-cidr <cidr range>
 	--instance-type <type>
-	--os <os>
+	--os <os name>
 	EOF
         )";;
     esac
@@ -507,35 +512,11 @@ configure() {
       CBD_EC2_INSTANCE_TYPE_NEW="${CBD_EC2_INSTANCE_TYPE_NEW:-${CBD_EC2_INSTANCE_TYPE}}"
     fi
 
-    if validate_instance_type ${CBD_EC2_INSTANCE_TYPE_NEW}; then
+    if check_instance_type ${CBD_EC2_INSTANCE_TYPE_NEW}; then
       CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE_NEW}"
       break;
     else
-      cat <<- EOF
-	Invalid or unsupported instance type provided. Supported instanct types are:
-
-	t1.micro
-	t2.nano		t2.micro	t2.small	t2.medium	t2.large
-	m1.small	m1.medium	m1.large	m1.xlarge
-	m2.xlarge	m2.2xlarge	m2.4xlarge
-	m3.medium	m3.large	m3.xlarge	m3.2xlarge
-	m4.large	m4.xlarge	m4.2xlarge	m4.4xlarge	m4.10xlarger
-	m5.large	m5.xlarge	m5.2xlarge	m5.4xlarge	m5.12xlarge	m5.24xlarge
-	c1.medium	c1.xlarge
-	c3.large	c3.xlarge	c3.2xlarge	c3.4xlarge	c3.8xlarge
-	c4.large	c4.xlarge	c4.2xlarge	c4.4xlarge	c4.8xlarge
-	g2.2xlarge	g2.8xlarge
-	r3.large	r3.xlarge	r3.2xlarge	r3.4xlarge	r3.8xlarge
-	i2.xlarge	i2.2xlarge	i2.4xlarge	i2.8xlarge
-	d2.xlarge	d2.2xlarge	d2.4xlarge	d2.8xlarge
-	hi1.4xlarge
-	hs1.8xlarge
-	cr1.8xlarge
-	cc2.8xlarge
-	cg1.4xlarge
-	i3.large	i3.xlarge	i3.2xlarge	i3.4xlarge	i3.8xlarge	i3.16xlarge
-	h1.2xlarge	h1.4xlarge	h1.8xlarge	h1.16xlarge
-	EOF
+      echo "Invalid or unsupported instance type provided."
       CBD_EC2_INSTANCE_TYPE_NEW=""
     fi
   done
@@ -1150,7 +1131,7 @@ create_instance_help() {
 	   --instance-type <type>
 	   	The EC2 instance type. e.g. t2.micro, m5.large, etc.
 
-	   --os <os>
+	   --os <os name>
 	   	The operating system to use for the EC2 instance. Supported
 	   	values are: amzn1, trusty, xenial, bionic.
 	EOF
@@ -1228,38 +1209,7 @@ create_instance() {
         fi
         ;;
       --instance-type)
-	if validate_instance_type "$2"; then
-          CBD_EC2_INSTANCE_TYPE="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --instance-type: Invalid instance type provided.
-
-		Supported instanct types are:
-
-		t1.micro
-		t2.nano		t2.micro	t2.small	t2.medium	t2.large
-		m1.small	m1.medium	m1.large	m1.xlarge
-		m2.xlarge	m2.2xlarge	m2.4xlarge
-		m3.medium	m3.large	m3.xlarge	m3.2xlarge
-		m4.large	m4.xlarge	m4.2xlarge	m4.4xlarge	m4.10xlarger
-		m5.large	m5.xlarge	m5.2xlarge	m5.4xlarge	m5.12xlarge	m5.24xlarge
-		c1.medium	c1.xlarge
-		c3.large	c3.xlarge	c3.2xlarge	c3.4xlarge	c3.8xlarge
-		c4.large	c4.xlarge	c4.2xlarge	c4.4xlarge	c4.8xlarge
-		g2.2xlarge	g2.8xlarge
-		r3.large	r3.xlarge	r3.2xlarge	r3.4xlarge	r3.8xlarge
-		i2.xlarge	i2.2xlarge	i2.4xlarge	i2.8xlarge
-		d2.xlarge	d2.2xlarge	d2.4xlarge	d2.8xlarge
-		hi1.4xlarge
-		hs1.8xlarge
-		cr1.8xlarge
-		cc2.8xlarge
-		cg1.4xlarge
-		i3.large	i3.xlarge	i3.2xlarge	i3.4xlarge	i3.8xlarge	i3.16xlarge
-		h1.2xlarge	h1.4xlarge	h1.8xlarge	h1.16xlarge
-		EOF
-          exit 1
-        fi
+        CBD_EC2_INSTANCE_TYPE="$2"; shift 2;
         ;;
       *)
         usage_exit "$(cat <<- EOF
@@ -1268,9 +1218,9 @@ create_instance() {
 	--name <instance name>
 	--profile <AWS cli profile>
 	--region <AWS region>
-	--os <os>
 	--availability-zone <zone letter>
 	--instance-type <type>
+	--os <os name>
 	EOF
         )";;
     esac
@@ -1285,7 +1235,12 @@ create_instance() {
     exit 1
   fi
 
-  local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
+  if ! check_instance_type "${CBD_EC2_INSTANCE_TYPE}"; then
+    echo "cfn-aio: error: instance type invalid"
+    exit 1
+  fi
+
+  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
   local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
 
   get_stack_outputs cloudbd-regional-${CBD_REGION}
@@ -1317,6 +1272,7 @@ create_instance() {
     --region ${CBD_REGION} \
     --template-body file://templates/cloudbd-${CBD_EC2_OS}.yml \
     --stack-name ${EC2_STACK_NAME} \
+    --disable-rollback \
     --parameters \
         ParameterKey=InstanceName,ParameterValue=${CBD_EC2_NAME} \
         ParameterKey=KeyName,ParameterValue=${CBD_SSH_KEY_NAME} \
@@ -1367,10 +1323,6 @@ delete_instance_help() {
 
 	   --region <AWS region>
 	   	The region to delete the CloudBD EC2 instance.
-
-	   --os <os>
-	   	The operating system of the EC2 instance. Supported values
-	   	are: amzn1, trusty, xenial, bionic.
 	EOF
   exit 0
 }
@@ -1417,22 +1369,6 @@ delete_instance() {
           exit 1
         fi
         ;;
-      --os)
-	if validate_os "$2"; then
-          CBD_EC2_OS="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --os: Invalid or unsupported operating system provided.
-		Supported operating systems are:
-
-		amzn1		Amazon Linux AMI
-		trusty		Ubuntu 14.04 LTS / trusty
-		xenial		Ubuntu 16.04 LTS / xenial
-		bionic		Ubuntu 18.04 LTS / bionic
-		EOF
-          exit 1
-        fi
-        ;;
       *)
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
@@ -1440,7 +1376,6 @@ delete_instance() {
 	--name <instance name>
 	--profile <AWS cli profile>
 	--region <AWS region>
-	--os <os>
 	EOF
         )";;
     esac
@@ -1450,7 +1385,7 @@ delete_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
-  local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
+  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
 
   echo "Deleting CloudFormation stack ${EC2_STACK_NAME}"
 
@@ -1477,8 +1412,8 @@ update_instance_help() {
 	   update-stack' command. The AWS cli profile must have the rights to
 	   update the CloudFormation stack containing the EC2 instance.
 
-	   The region, name and operating system must all match an existing
-	   instance and may not be changed to new values by this command.
+	   The region and name must all match an existing instance and may not
+	   be changed to new values by this command.
 
 	Options:
 	   Required options:
@@ -1500,10 +1435,6 @@ update_instance_help() {
 
 	   --region <AWS region>
 	   	The region with the CloudBD EC2 instance.
-
-	   --os <os>
-	   	The operating system to use for the EC2 instance. Supported
-	   	values are: amzn1, trusty, xenial, bionic.
 	EOF
   exit 0
 }
@@ -1550,55 +1481,8 @@ update_instance() {
           exit 1
         fi
         ;;
-      --os)
-	if validate_os "$2"; then
-          CBD_EC2_OS="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --os: Invalid or unsupported operating system provided.
-		Supported operating systems are:
-
-		amzn1		Amazon Linux AMI
-		trusty		Ubuntu 14.04 LTS / trusty
-		xenial		Ubuntu 16.04 LTS / xenial
-		bionic		Ubuntu 18.04 LTS / bionic
-		EOF
-          exit 1
-        fi
-        ;;
       --instance-type)
-	if validate_instance_type "$2"; then
-          CBD_EC2_INSTANCE_TYPE_NEW="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --instance-type: Invalid instance type provided.
-
-		Supported instanct types are:
-
-		t1.micro
-		t2.nano		t2.micro	t2.small	t2.medium	t2.large
-		m1.small	m1.medium	m1.large	m1.xlarge
-		m2.xlarge	m2.2xlarge	m2.4xlarge
-		m3.medium	m3.large	m3.xlarge	m3.2xlarge
-		m4.large	m4.xlarge	m4.2xlarge	m4.4xlarge	m4.10xlarger
-		m5.large	m5.xlarge	m5.2xlarge	m5.4xlarge	m5.12xlarge	m5.24xlarge
-		c1.medium	c1.xlarge
-		c3.large	c3.xlarge	c3.2xlarge	c3.4xlarge	c3.8xlarge
-		c4.large	c4.xlarge	c4.2xlarge	c4.4xlarge	c4.8xlarge
-		g2.2xlarge	g2.8xlarge
-		r3.large	r3.xlarge	r3.2xlarge	r3.4xlarge	r3.8xlarge
-		i2.xlarge	i2.2xlarge	i2.4xlarge	i2.8xlarge
-		d2.xlarge	d2.2xlarge	d2.4xlarge	d2.8xlarge
-		hi1.4xlarge
-		hs1.8xlarge
-		cr1.8xlarge
-		cc2.8xlarge
-		cg1.4xlarge
-		i3.large	i3.xlarge	i3.2xlarge	i3.4xlarge	i3.8xlarge	i3.16xlarge
-		h1.2xlarge	h1.4xlarge	h1.8xlarge	h1.16xlarge
-		EOF
-          exit 1
-        fi
+        CBD_EC2_INSTANCE_TYPE_NEW="$2"; shift 2;
         ;;
       *)
         usage_exit "$(cat <<- EOF
@@ -1607,7 +1491,6 @@ update_instance() {
 	--name <instance name>
 	--profile <AWS cli profile>
 	--region <AWS region>
-	--os <os>
 	--availability-zone <zone letter>
 	--instance-type <type>
 	EOF
@@ -1623,13 +1506,18 @@ update_instance() {
     usage_exit "cfn-aio: error: argument --instance-type: Missing required argument --instance-type"
   fi
 
+  if ! check_instance_type "${CBD_EC2_INSTANCE_TYPE_NEW}"; then
+    echo "cfn-aio: error: instance type invalid"
+    exit 1
+  fi
   CBD_EC2_INSTANCE_TYPE=${CBD_EC2_INSTANCE_TYPE_NEW}
 
-  local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
+  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
   local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
 
   get_stack_outputs ${EC2_STACK_NAME}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
+  CBD_EC2_OS=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
 
   if [[ ! -n ${InstanceId} ]]; then
     echo "cfn-aio: error: instance id: Unable to query instance id"
@@ -1672,7 +1560,7 @@ ssh_instance_help() {
 	Description:
 	   The ssh command SSH's into an existing EC2 instance created with the
 	   create-instance command. Using the required --name argument together
-	   with the region, and operating system, the current public DNS address
+	   with the region the current public DNS address and operating system
 	   is queryed using the AWS cli and an ssh command is executed with the
 	   following values:
 
@@ -1704,10 +1592,6 @@ ssh_instance_help() {
 
 	   --region <AWS region>
 	   	The region with the CloudBD EC2 instance.
-
-	   --os <os>
-	   	The operating system for the EC2 instance. Supported values
-	   	are: amzn1, trusty, xenial, bionic.
 
 	   -- <ssh options>
 	   	Argments to pass to SSH.
@@ -1757,22 +1641,6 @@ ssh_instance() {
           exit 1
         fi
         ;;
-      --os)
-	if validate_os "$2"; then
-          CBD_EC2_OS="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --os: Invalid or unsupported operating system provided.
-		Supported operating systems are:
-
-		amzn1		Amazon Linux AMI
-		trusty		Ubuntu 14.04 LTS / trusty
-		xenial		Ubuntu 16.04 LTS / xenial
-		bionic		Ubuntu 18.04 LTS / bionic
-		EOF
-          exit 1
-        fi
-        ;;
       --)
         shift
         EC2_SSH_ARGUMENTS="$@"
@@ -1785,7 +1653,6 @@ ssh_instance() {
 	--name <instance name>
 	--profile <AWS cli profile>
 	--region <AWS region>
-	--os <os>
 	-- <arguments to pass to ssh command>
 	EOF
         )";;
@@ -1796,10 +1663,11 @@ ssh_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
-  local EC2_STACK_NAME="cloudbd-${CBD_EC2_OS}-${CBD_REGION}-${CBD_EC2_NAME}"
+  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
 
   get_stack_outputs ${EC2_STACK_NAME}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
+  CBD_EC2_OS=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
 
   local EC2_PUBLIC_DNS=$(aws ec2 describe-instances \
     --profile ${CBD_PROFILE} \

@@ -24,80 +24,8 @@ Parameters:
     Type: String
     Default: ""
   InstanceType:
-    Description: CloudBD Ubuntu 16.04/xenial EC2 instance type
+    Description: EC2 instance type
     Type: String
-    AllowedValues:
-    - t1.micro
-    - t2.nano
-    - t2.micro
-    - t2.small
-    - t2.medium
-    - t2.large
-    - m1.small
-    - m1.medium
-    - m1.large
-    - m1.xlarge
-    - m2.xlarge
-    - m2.2xlarge
-    - m2.4xlarge
-    - m3.medium
-    - m3.large
-    - m3.xlarge
-    - m3.2xlarge
-    - m4.large
-    - m4.xlarge
-    - m4.2xlarge
-    - m4.4xlarge
-    - m4.10xlarge
-    - c1.medium
-    - c1.xlarge
-    - c3.large
-    - c3.xlarge
-    - c3.2xlarge
-    - c3.4xlarge
-    - c3.8xlarge
-    - c4.large
-    - c4.xlarge
-    - c4.2xlarge
-    - c4.4xlarge
-    - c4.8xlarge
-    - g2.2xlarge
-    - g2.8xlarge
-    - r3.large
-    - r3.xlarge
-    - r3.2xlarge
-    - r3.4xlarge
-    - r3.8xlarge
-    - i2.xlarge
-    - i2.2xlarge
-    - i2.4xlarge
-    - i2.8xlarge
-    - d2.xlarge
-    - d2.2xlarge
-    - d2.4xlarge
-    - d2.8xlarge
-    - hi1.4xlarge
-    - hs1.8xlarge
-    - cr1.8xlarge
-    - cc2.8xlarge
-    - cg1.4xlarge
-    - m5.large
-    - m5.xlarge
-    - m5.2xlarge
-    - m5.4xlarge
-    - m5.12xlarge
-    - m5.24xlarge
-    - i3.large
-    - i3.xlarge
-    - i3.2xlarge
-    - i3.4xlarge
-    - i3.8xlarge
-    - i3.16xlarge
-    - h1.2xlarge
-    - h1.4xlarge
-    - h1.8xlarge
-    - h1.16xlarge
-    ConstraintDescription: must be a valid EC2 instance type.
   AvailabilityZone:
     Description: The Availability Zone letter to create the EC2 instance
     Type: String
@@ -286,23 +214,21 @@ Resources:
         Fn::FindInMap:
         - AWSRegionArch2AMI
         - !Ref AWS::Region
-        - Fn::FindInMap:
-          - AWSInstanceType2Arch
-          - !Ref InstanceType
-          - Arch
+        - HVM64
       Tags:
         -
           Key: Name
-          Value: !Join [ '-', ['cloudbd-xenial', !Ref 'AWS::Region', !Ref InstanceName ] ]
+          Value: !Join [ '-', ['cloudbd-ec2', !Ref InstanceName ] ]
       UserData:
         Fn::Base64:
           !Sub |
             #!/bin/bash -x
             export DEBIAN_FRONTEND=noninteractive
 
-            # apt frequently gets stuck when using ipv6
-            sysctl -w net.ipv6.conf.all.disable_ipv6=1
-            sysctl -w net.ipv6.conf.default.disable_ipv6=1
+            # The regional <region>.ec2.archive.ubuntu.com sources frequently
+            # are not responsive or very very slow causing instances to time-out
+            # so let's not use them.
+            sed -i 's/http:.*\.ec2\.archive\.ubuntu\.com\/ubuntu\//mirror:\/\/mirrors\.ubuntu\.com\/mirrors\.txt/' /etc/apt/sources.list
 
             # upgrade packages and kernel
             apt-get update
@@ -431,8 +357,11 @@ Resources:
                 usermod -a -G cloudbd ubuntu
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT7M
+        Timeout: PT10M
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
     Value: !Ref CloudBDXenialInstance
+  OperatingSystem:
+    Description: Operating system name
+    Value: 'xenial'
