@@ -163,6 +163,13 @@ Resources:
               owner: "root"
               group: "root"
         Install:
+          files:
+            /etc/sysctl.d/20-cloudbd.conf:
+              content: !Sub |
+                vm.dirty_background_bytes=2097152
+              mode: "000644"
+              owner: "root"
+              group: "root"
           packages:
             yum:
               cbd-client: []
@@ -197,6 +204,10 @@ Resources:
               command: !Sub |
                 set -xe
                 usermod -a -G cloudbd ec2-user
+            04-sysctls:
+              command: !Sub |
+                set -xe
+                sysctl vm.dirty_background_bytes=2097152
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M

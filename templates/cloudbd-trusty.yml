@@ -313,6 +313,13 @@ Resources:
                 set -xe
                 apt-get update
         Install:
+          files:
+            /etc/sysctl.d/20-cloudbd.conf:
+              content: !Sub |
+                vm.dirty_background_bytes=2097152
+              mode: "000644"
+              owner: "root"
+              group: "root"
           commands:
             01-packages:
               command: !Sub |
@@ -348,6 +355,10 @@ Resources:
               command: !Sub |
                 set -xe
                 usermod -a -G cloudbd ubuntu
+            05-sysctls:
+              command: !Sub |
+                set -xe
+                sysctl vm.dirty_background_bytes=2097152
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M
