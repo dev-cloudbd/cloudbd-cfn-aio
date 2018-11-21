@@ -1,11 +1,18 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudBD Ubuntu 14.04/trusty Template:
+Description: 'CloudBD Ubuntu 18.04/bionic Template:
   This template creates and configures an EC2 instance using the VPC,
-  S3 Bucket, IAM user and SSH key-pair from the regional template.'
+  S3 Bucket, IAM user and SSH key-pair from the remote template.'
 Parameters:
   InstanceName:
-    Description: The Ubuntu 14.04/trusty unique name of the instance
+    Description: The Ubuntu 18.04/bionic unique name of the instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '32'
+    AllowedPattern: "[a-zA-Z][a-zA-Z_0-9-]*"
+    ConstraintDescription: must start with an alphabetic character and contain only alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+  RemoteName:
+    Description: The remote name
     Type: String
     MinLength: '1'
     MaxLength: '32'
@@ -34,181 +41,46 @@ Parameters:
     AllowedPattern: "[a-f]"
     ConstraintDescription: must be a single character in the range a-f
 Mappings:
-  AWSInstanceType2Arch:
-    t1.micro:
-      Arch: HVM64
-    t2.nano:
-      Arch: HVM64
-    t2.micro:
-      Arch: HVM64
-    t2.small:
-      Arch: HVM64
-    t2.medium:
-      Arch: HVM64
-    t2.large:
-      Arch: HVM64
-    m1.small:
-      Arch: HVM64
-    m1.medium:
-      Arch: HVM64
-    m1.large:
-      Arch: HVM64
-    m1.xlarge:
-      Arch: HVM64
-    m2.xlarge:
-      Arch: HVM64
-    m2.2xlarge:
-      Arch: HVM64
-    m2.4xlarge:
-      Arch: HVM64
-    m3.medium:
-      Arch: HVM64
-    m3.large:
-      Arch: HVM64
-    m3.xlarge:
-      Arch: HVM64
-    m3.2xlarge:
-      Arch: HVM64
-    m4.large:
-      Arch: HVM64
-    m4.xlarge:
-      Arch: HVM64
-    m4.2xlarge:
-      Arch: HVM64
-    m4.4xlarge:
-      Arch: HVM64
-    m4.10xlarge:
-      Arch: HVM64
-    c1.medium:
-      Arch: HVM64
-    c1.xlarge:
-      Arch: HVM64
-    c3.large:
-      Arch: HVM64
-    c3.xlarge:
-      Arch: HVM64
-    c3.2xlarge:
-      Arch: HVM64
-    c3.4xlarge:
-      Arch: HVM64
-    c3.8xlarge:
-      Arch: HVM64
-    c4.large:
-      Arch: HVM64
-    c4.xlarge:
-      Arch: HVM64
-    c4.2xlarge:
-      Arch: HVM64
-    c4.4xlarge:
-      Arch: HVM64
-    c4.8xlarge:
-      Arch: HVM64
-    r3.large:
-      Arch: HVM64
-    r3.xlarge:
-      Arch: HVM64
-    r3.2xlarge:
-      Arch: HVM64
-    r3.4xlarge:
-      Arch: HVM64
-    r3.8xlarge:
-      Arch: HVM64
-    i2.xlarge:
-      Arch: HVM64
-    i2.2xlarge:
-      Arch: HVM64
-    i2.4xlarge:
-      Arch: HVM64
-    i2.8xlarge:
-      Arch: HVM64
-    d2.xlarge:
-      Arch: HVM64
-    d2.2xlarge:
-      Arch: HVM64
-    d2.4xlarge:
-      Arch: HVM64
-    d2.8xlarge:
-      Arch: HVM64
-    hi1.4xlarge:
-      Arch: HVM64
-    hs1.8xlarge:
-      Arch: HVM64
-    cr1.8xlarge:
-      Arch: HVM64
-    cc2.8xlarge:
-      Arch: HVM64
-    m5.large:
-      Arch: HVM64
-    m5.xlarge:
-      Arch: HVM64
-    m5.2xlarge:
-      Arch: HVM64
-    m5.4xlarge:
-      Arch: HVM64
-    m5.12xlarge:
-      Arch: HVM64
-    m5.24xlarge:
-      Arch: HVM64
-    i3.large:
-      Arch: HVM64
-    i3.xlarge:
-      Arch: HVM64
-    i3.2xlarge:
-      Arch: HVM64
-    i3.4xlarge:
-      Arch: HVM64
-    i3.8xlarge:
-      Arch: HVM64
-    i3.16xlarge:
-      Arch: HVM64
-    h1.2xlarge:
-      Arch: HVM64
-    h1.4xlarge:
-      Arch: HVM64
-    h1.8xlarge:
-      Arch: HVM64
-    h1.16xlarge:
-      Arch: HVM64
   AWSRegionArch2AMI:
     us-east-1:
-      HVM64: ami-05a36d3b9aa4a17ac
+      HVM64: ami-0977029b5b13f3d08
     us-west-2:
-      HVM64: ami-0ea790e761025f9ce
+      HVM64: ami-0f47ef92b4218ec09
     us-west-1:
-      HVM64: ami-056411f6be4840844
+      HVM64: ami-03d5270fcb641f79b
     eu-west-1:
-      HVM64: ami-02699dba41e68180a
+      HVM64: ami-0aebeb281fdee5054
     eu-west-2:
-      HVM64: ami-024279d2324df257e
+      HVM64: ami-03f2ee00e9dc6b85f
     eu-west-3:
-      HVM64: ami-0b49b417468d0e8d1
+      HVM64: ami-0a2ca21adb4a04084
     eu-central-1:
-      HVM64: ami-02bcc91bbf9535b00
+      HVM64: ami-0dfd7cad24d571c54
     ap-northeast-1:
-      HVM64: ami-0be9269b44d4b26c1
+      HVM64: ami-033cdfcdd17e140cc
     ap-northeast-2:
-      HVM64: ami-017332df4b882edd2
+      HVM64: ami-0b04c9bf8abfa5b89
     ap-southeast-1:
-      HVM64: ami-09592de3725419634
+      HVM64: ami-012e97ef137a3f446
     ap-southeast-2:
-      HVM64: ami-0d9ca8d416482590e
+      HVM64: ami-0b1f854598cf629f6
     ap-south-1:
-      HVM64: ami-09dcf5653a185f5df
+      HVM64: ami-0807bb2b5888ad68c
     us-east-2:
-      HVM64: ami-0970ab4b97fe3a913
+      HVM64: ami-05f39e7b7f153bc6a
     ca-central-1:
-      HVM64: ami-031b4238707e9edc0
+      HVM64: ami-01428c87658222f33
     sa-east-1:
-      HVM64: ami-01c858a779ba95305
+      HVM64: ami-0389698ad66808197
 Resources:
-  CloudBDTrustyInstance:
+  CloudBDBionicInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - Fn::ImportValue: !Sub 'cloudbd-regional-${AWS::Region}-SecurityGroup'
+        - Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-SecurityGroup' ] ]
       SubnetId:
-        Fn::ImportValue: !Join [ '', ['cloudbd-regional-', !Ref 'AWS::Region', '-subnet-', !Ref AvailabilityZone ] ]
+        Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-subnet-', !Ref AvailabilityZone ] ]
       KeyName: !Ref KeyName
       ImageId:
         Fn::FindInMap:
@@ -231,18 +103,15 @@ Resources:
             sed -i 's/http:.*\.ec2\.archive\.ubuntu\.com\/ubuntu\//mirror:\/\/mirrors\.ubuntu\.com\/mirrors\.txt/' /etc/apt/sources.list
 
             # upgrade packages and kernel
-            apt-get update
+            apt-get -y update
             apt-get -y dist-upgrade
 
             # install cfn bootstrap package
             apt-get -y install python-pip
-            pip install ndg-httpsclient
             pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-            ln -s /usr/local/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
-            chmod +x /usr/local/init/ubuntu/cfn-hup
 
             # perform AWS::CloudFormation::Init tasks
-            /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDTrustyInstance --configsets default --region ${AWS::Region}
+            /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDBionicInstance --configsets default --region ${AWS::Region}
 
             # reboot if needed and signal completion to cloudfront
             RET=$?
@@ -252,11 +121,11 @@ Resources:
             	PATH=/sbin:/bin:/usr/sbin:/usr/bin
             	MAILTO=root
             	HOME=/
-            	@reboot root { /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDTrustyInstance --region ${AWS::Region}; rm /etc/cron.d/cfn-signal; } > /dev/null
+            	@reboot root { /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDBionicInstance --region ${AWS::Region}; rm /etc/cron.d/cfn-signal; } > /dev/null
             	EOF
               reboot
             else
-              /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDTrustyInstance --region ${AWS::Region}
+              /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDBionicInstance --region ${AWS::Region}
             fi
     Metadata:
       AWS::CloudFormation::Init:
@@ -281,28 +150,38 @@ Resources:
               content: !Sub |
                 [cfn-auto-reloader-hook]
                 triggers=post.update
-                path=Resources.CloudBDTrustyInstance.Metadata
-                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDTrustyInstance --configsets default --region ${AWS::Region}
+                path=Resources.CloudBDBionicInstance.Metadata
+                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDBionicInstance --configsets default --region ${AWS::Region}
                 runas=root
               mode: "000400"
               owner: "root"
               group: "root"
-          services:
-            sysvinit:
-              cfn-hup:
-                enabled: true
-                ensureRunning: true
-                files:
-                  - "/etc/cfn/cfn-hup.conf"
-                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
+            /etc/systemd/system/cfn-hup.service:
+              content: !Sub |
+                [Unit]
+                Description=Cloud formation helper daemon
+
+                [Service]
+                ExecStart=/usr/local/bin/cfn-hup
+                Restart=always
+                Type=simple
+
+                [Install]
+                WantedBy=multi-user.target
+          commands:
+            01-install-cfn-hup:
+              command: !Sub |
+                set -xe
+                systemctl enable cfn-hup.service
+                systemctl start cfn-hup.service
         RepoInstall:
           files:
             /etc/apt/sources.list.d/cloudbd.list:
-              source: https://repo.cloudbd.io/trusty/cloudbd.list
+              source: https://repo.cloudbd.io/bionic/cloudbd.list
               mode: "000644"
               owner: "root"
               group: "root"
-            /etc/apt/trusted.gpg.d/cloudbd.gpg:
+            /usr/share/keyrings/cloudbd-keyring.gpg:
               source: https://repo.cloudbd.io/cloudbd-keyring.gpg
               mode: "000644"
               owner: "root"
@@ -311,7 +190,7 @@ Resources:
             01-apt-update:
               command: !Sub |
                 set -xe
-                apt-get update
+                apt-get -y update
         Install:
           files:
             /etc/sysctl.d/20-cloudbd.conf:
@@ -324,7 +203,7 @@ Resources:
             01-packages:
               command: !Sub |
                 set -xe
-                apt-get install -y cbd-client
+                apt-get -y install cbd-client
             02-remote-conf:
               command: !Sub
                 - |
@@ -337,7 +216,7 @@ Resources:
                     chown root:cloudbd ${!ConfFile}
                   fi
                 - ConfURL: !Ref RemoteConfURL
-                  ConfFile: !Sub '/etc/cloudbd/remotes.d/${AWS::Region}.conf'
+                  ConfFile: !Join [ '', ['/etc/cloudbd/remotes.d/', !Ref RemoteName, '.conf' ] ]
             03-creds:
               command: !Sub
                 - |
@@ -365,7 +244,10 @@ Resources:
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
-    Value: !Ref CloudBDTrustyInstance
+    Value: !Ref CloudBDBionicInstance
   OperatingSystem:
     Description: Operating system name
-    Value: 'trusty'
+    Value: 'bionic'
+  RemoteName:
+    Description: Remote name this instance was created in
+    Value: !Ref RemoteName

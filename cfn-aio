@@ -1,17 +1,17 @@
 #!/bin/bash
 #
 # Copyright (c) 2018 CloudBD, LLC
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +24,7 @@
 REPO_PATH=$(dirname $(python -c "import os; print(os.path.realpath('${BASH_SOURCE[0]}'))"))
 cd ${REPO_PATH}
 
-CBD_CONFIG_FILE="./config/.cfn-aio-config"
+CBD_CONFIG_FILE="config/.cfn-aio-config"
 
 if [ -f ${CBD_CONFIG_FILE} ]; then
   source ${CBD_CONFIG_FILE}
@@ -32,10 +32,11 @@ fi
 
 # default values for unconfigured use
 CBD_PROFILE="${CBD_PROFILE:-default}"
+CBD_REMOTE_NAME="${CBD_REMOTE_NAME:-remote}"
 CBD_REGION="${CBD_REGION:-us-east-2}"
 CBD_AVAILABILITY_ZONE="${CBD_AVAILABILITY_ZONE:-a}"
 CBD_SSH_CIDR_RANGE="${CBD_SSH_CIDR_RANGE:-0.0.0.0/0}"
-CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE:-t2.micro}"
+CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE:-t3.micro}"
 CBD_EC2_OS="${CBD_EC2_OS:-amzn1}"
 
 validate_region() {
@@ -115,43 +116,39 @@ validate_os() {
 
 check_instance_type() {
   case "$1" in
-    t1.micro)
+    t2.nano|t2.micro|t2.small|t2.medium|t2.large|t2.xlarge|t2.2xlarge)
       return 0;;
-    t2.nano|t2.micro|t2.small|t2.medium|t2.large)
+    t3.nano|t3.micro|t3.small|t3.medium|t3.large|t3.xlarge|t3.2xlarge)
       return 0;;
-    m1.small|m1.medium|m1.large|m1.xlarge)
+    m4.large|m4.xlarge|m4.2xlarge|m4.4xlarge|m4.10xlarge|m4.16xlarge)
       return 0;;
-    m2.xlarge|m2.2xlarge|m2.4xlarge)
+    m5.large|m5.xlarge|m5.2xlarge|m5.4xlarge|m5.12xlarge|m5.24xlarge)
       return 0;;
-    m3.medium|m3.large|m3.xlarge|m3.2xlarge)
+    m5d.large|m5d.xlarge|m5d.2xlarge|m5d.4xlarge|m5d.12xlarge|m5d.24xlarge)
       return 0;;
-    m4.large|m4.xlarge|m4.2xlarge|m4.4xlarge|m4.10xlarger)
-      return 0;;
-    c1.medium|c1.xlarge)
-      return 0;;
-    c3.large|c3.xlarge|c3.2xlarge|c3.4xlarge|c3.8xlarge)
+    m5a.large|m5a.xlarge|m5a.2xlarge|m5a.4xlarge|m5a.12xlarge|m5a.24xlarge)
       return 0;;
     c4.large|c4.xlarge|c4.2xlarge|c4.4xlarge|c4.8xlarge)
       return 0;;
-    g2.2xlarge|g2.8xlarge)
+    c5.large|c5.xlarge|c5.2xlarge|c5.4xlarge|c5.9xlarge|c5.18xlarge)
       return 0;;
-    r3.large|r3.xlarge|r3.2xlarge|r3.4xlarge|r3.8xlarge)
+    c5d.large|c5d.xlarge|c5d.2xlarge|c5d.4xlarge|c5d.9xlarge|c5d.18xlarge)
       return 0;;
-    i2.xlarge|i2.2xlarge|i2.4xlarge|i2.8xlarge)
+    r4.large|r4.xlarge|r4.2xlarge|r4.4xlarge|r4.8xlarge|r4.16xlarge)
+      return 0;;
+    r5.large|r5.xlarge|r5.2xlarge|r5.4xlarge|r5.12xlarge|r5.24xlarge)
+      return 0;;
+    r5d.large|r5d.xlarge|r5d.2xlarge|r5d.4xlarge|r5d.12xlarge|r5d.24xlarge)
+      return 0;;
+    r5a.large|r5a.xlarge|r5a.2xlarge|r5a.4xlarge|r5a.12xlarge|r5a.24xlarge)
+      return 0;;
+    z1d.large|x1d.xlarge|x1d.2xlarge|z1d.3xlarge|z1d.6xlarge|z1d.12xlarge)
+      return 0;;
+    x1.16xlarge|x1.32xlarge)
+      return 0;;
+    x1e.xlarge|x1e.2xlarge|x1e.4xlarge|x1e.8xlarge|x1e.16xlarge|x1e.32xlarge)
       return 0;;
     d2.xlarge|d2.2xlarge|d2.4xlarge|d2.8xlarge)
-      return 0;;
-    hi1.4xlarge)
-      return 0;;
-    hs1.8xlarge)
-      return 0;;
-    cr1.8xlarge)
-      return 0;;
-    cc2.8xlarge)
-      return 0;;
-    cg1.4xlarge)
-      return 0;;
-    m5.large|m5.xlarge|m5.2xlarge|m5.4xlarge|m5.12xlarge|m5.24xlarge)
       return 0;;
     i3.large|i3.xlarge|i3.2xlarge|i3.4xlarge|i3.8xlarge|i3.16xlarge)
       return 0;;
@@ -169,7 +166,7 @@ check_instance_type() {
 }
 
 check_credentials() {
-  if [ ! -f ./config/credentials.json ]; then
+  if [ ! -f config/credentials.json ]; then
     cat <<- EOF
 	cfn-aio: error: missing credentials:
 
@@ -212,7 +209,7 @@ cloudformation_tail() {
     || [ "$stackStatus" = "UPDATE_COMPLETE" ] \
     || [ "$stackStatus" = "UPDATE_ROLLBACK_COMPLETE" ] \
     || [ "$stackStatus" = "UPDATE_ROLLBACK_FAILED" ]; do
-    
+
     lastEvent=$(aws cloudformation describe-stack-events \
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
@@ -302,15 +299,15 @@ do_help() {
 
 	Commands:
 
-	   help			Show this help message
-	   configure		Configure default values
-	   create-region	Create regional resources
-	   create-instance	Create an EC2 instance
-	   delete-region	Delete regional resources
-	   delete-instance	Delete an EC2 instance
-	   update-region	Update regional resources
-	   update-instance	Update an EC2 instance
-	   ssh			SSH into an EC2 instance
+	   help             Show this help message
+	   configure        Configure default values
+	   create-remote    Create remote resources
+	   create-instance  Create an EC2 instance
+	   delete-remote    Delete remote resources
+	   delete-instance  Delete an EC2 instance
+	   update-remote    Update remote resources
+	   update-instance  Update an EC2 instance
+	   ssh              SSH into an EC2 instance
 	EOF
   exit 0
 }
@@ -347,6 +344,10 @@ configure_help() {
 	   creating, deleting, or updating resources. The default value when
 	   unconfigured is "us-east-2".
 
+	   CBD_REMOTE_NAME - This is the name of the CloudBD remote that will be
+	   used by default when creating, deleting, or updating CloudBD remote
+	   resources. The default value when unconfigured is "remote".
+
 	   CBD_AVAILABILITY_ZONE - This is the availability zone letter in the
 	   CBD_REGION that will be used by default when creating EC2 instances
 	   using the create-instance command. Supported values are a-f and must
@@ -363,7 +364,7 @@ configure_help() {
 
 	   CBD_EC2_INSTANCE_TYPE - This is the instance type that will be used
 	   by default when creating EC2 instances using the create-instance
-	   command.  The default value when unconfigured is "t2.micro".
+	   command.  The default value when unconfigured is "t3.micro".
 
 	   CBD_EC2_OS - This is the operating system that will be used by
 	   default when creating EC2 instances using the create-instance
@@ -376,6 +377,9 @@ configure_help() {
 
 	   --region <AWS region>
 	   	Set the default cfn-aio region.
+
+	   --remote-name <remote name>
+	   	Set the default CloudBD remote name.
 
 	   --availability-zone <zone letter>
 	   	Set the default availability zone letter in the region.
@@ -401,6 +405,8 @@ configure() {
         shift; CBD_PROFILE_NEW="$1"; shift;;
       --region)
         shift; CBD_REGION_NEW="$1"; shift;;
+      --remote-name)
+        shift; CBD_REMOTE_NAME_NEW="$1"; shift;;
       --availability-zone)
         shift; CBD_AVAILABILITY_ZONE_NEW="$1"; shift;;
       --ssh-cidr)
@@ -415,6 +421,7 @@ configure() {
 
 	--profile <AWS cli profile>
 	--region <AWS region>
+	--remote-name <remote name>
 	--availability-zone <zone letter>
 	--ssh-cidr <cidr range>
 	--instance-type <type>
@@ -473,6 +480,24 @@ configure() {
 	ap-south-1	ca-central-1	sa-east-1
 	EOF
       CBD_REGION_NEW=""
+    fi
+  done
+
+  while true; do
+    if [[ -z ${CBD_REMOTE_NAME_NEW} ]]; then
+      read -p "Default remote name [${CBD_REMOTE_NAME}]: " CBD_REMOTE_NAME_NEW
+      CBD_REMOTE_NAME_NEW="${CBD_REMOTE_NAME_NEW:-${CBD_REMOTE_NAME}}"
+    fi
+
+    if validate_name ${CBD_REMOTE_NAME_NEW}; then
+      CBD_REMOTE_NAME="${CBD_REMOTE_NAME_NEW}"
+      break;
+    else
+      cat <<- EOF
+	Remote names must start with a letter and contain alpha-numeric characters and
+	hyphens only. 32 characters max.
+	EOF
+      CBD_REMOTE_NAME_NEW=""
     fi
   done
 
@@ -546,13 +571,14 @@ configure() {
   cat <<- EOF > ${CBD_CONFIG_FILE}
 	CBD_PROFILE="${CBD_PROFILE}"
 	CBD_REGION="${CBD_REGION}"
+	CBD_REMOTE_NAME="${CBD_REMOTE_NAME}"
 	CBD_AVAILABILITY_ZONE="${CBD_AVAILABILITY_ZONE}"
 	CBD_SSH_CIDR_RANGE="${CBD_SSH_CIDR_RANGE}"
 	CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE}"
 	CBD_EC2_OS="${CBD_EC2_OS}"
 	EOF
 
-  if [ ! -f ./config/credentials.json ]; then
+  if [ ! -f config/credentials.json ]; then
     cat <<- EOF
 
 	   In order to use cfn-aio the CloudBD credentials.json file needs to be
@@ -568,33 +594,32 @@ configure() {
   fi
 }
 
-create_region_help() {
+create_remote_help() {
   cat <<- EOF
 	Usage:
-	   cfn-aio create-region [options]
+	   cfn-aio create-remote [options]
 
 	Description:
-	   The create-region command creates the regional AWS resources needed
-	   for CloudBD EC2 instances. The resources are created using the AWS
-	   cli using either the default configured profile or the profile
-           provided via the --profile option. The AWS cli and a CloudFormation
-	   template are used in this process. The AWS cli profile must have the
-	   rights to create the resources outlined below.
+	   The create-remote command creates the AWS resources needed for CloudBD
+	   EC2 instances. The resources are created using the AWS cli using either
+	   the default configured profile or the profile provided via the
+	   --profile option. The AWS cli and a CloudFormation template are used
+	   in this process. The AWS cli profile must have the rights to create
+	   the resources outlined below.
 
-	   After creating the AWS resources the create-region command creates
+	   After creating the AWS resources the create-remote command creates
 	   a CloudBD remote config file that is stored in the S3 bucket along
 	   with a copy of the CloudBD credentials.json file. When EC2 instances
-	   are created they download these files to complete their
-	   configuration.
+	   are created they download these files to complete their configuration.
 
 	   The resources created via this command may be removed by the
-	   delete-region command, provided all CloudBD disks and the EC2
-	   instances have been deleted first. See the delete-command for
+	   delete-remote command, provided all CloudBD disks and the EC2
+	   instances have been deleted first. See the delete-remote command for
 	   details.
 
 	Resources:
 	   Unless otherwise specified, the following resources are created via a
-	   CloudFormation template in templates/cloudbd-regional.yml and uses
+	   CloudFormation template in templates/cloudbd-resources.yml and uses
 	   the 'aws cloudformation create-stack' command to create the
 	   resources:
 
@@ -615,18 +640,18 @@ create_region_help() {
 	   AccessKeyId and SecretAccessKey are saved in the CloudBD remote conf
 	   file. CloudBD disks use the IAM User's access key to write to the S3
 	   bucket.
-	   
+
 	   EC2 VPC - This VPC is created with an S3 endpoint and other
 	   associated resources needed for CloudBD EC2 instances. EC2 instances
 	   created via the create-instance command use this VPC. The VPC
 	   includes Subnets for all availability zones in the region, an
 	   InternetGateway, an S3 VPCEndpoint, Routing Table and attachments.
-	   See the regional template for details.
+	   See the cloudbd-resources template for details.
 
 	   EC2 SecurityGroup - The SecurityGroup is created with SSH access from
 	   the internet limited by the configured default SSH IpV4 Cidr value or
 	   by the --ssh-cidr option if provided. EC2 instances created via the
-	   create-instance command use this SecurityGroup. 
+	   create-instance command use this SecurityGroup.
 
 	Options:
 	   When options are provided they override the default configured values
@@ -637,7 +662,12 @@ create_region_help() {
 	   	The AWS cli profile to use.
 
 	   --region <AWS region>
-	   	The region to create CloudBD regional resources in.
+	   	The region to create CloudBD resources in.
+
+	   --remote-name <remote name>
+	   	A unique name for the remote within the region. It must start with
+	   	a letter and contain alpha-numeric characters and hyphens only. 32
+	   	characters max.
 
 	   --ssh-cidr <cidr range>
 	   	The SSH Cidr address range that is allowed to SSH into EC2
@@ -647,11 +677,11 @@ create_region_help() {
   exit 0
 }
 
-create_region() {
+create_remote() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       help)
-        shift; create_region_help;;
+        shift; create_remote_help;;
       --profile)
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
@@ -676,6 +706,19 @@ create_region() {
           exit 1
         fi
         ;;
+      --remote-name)
+        if validate_name "$2"; then
+          CBD_REMOTE_NAME="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --remote_name: Invalid remote name provided.
+
+		Remote names must start with a letter and contain alpha-numeric characters and
+		hyphens only. 32 characters max.
+		EOF
+          exit 1
+        fi
+	;;
       --ssh-cidr)
 	if validate_cidr "$2"; then
           CBD_SSH_CIDR_RANGE="$2"; shift 2;
@@ -688,8 +731,9 @@ create_region() {
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
-	--region <AWS region>
 	--profile <AWS cli profile>
+	--region <AWS region>
+	--remote-name <remote name>
 	--ssh-cidr <cidr range>
 	EOF
         )";;
@@ -700,47 +744,49 @@ create_region() {
 
   build_all_availability_zones
 
-  local CBD_SSH_KEY_FILE="./config/cloudbd-${CBD_REGION}-key.pem"
-  local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
+  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
+  local SSHKeyFile="config/${SSHKeyName}.pem"
+  local RemoteConfFile="config/${CBD_REMOTE_NAME}-${CBD_REGION}.conf"
+  local RemoteStackName="cloudbd-resources-${CBD_REMOTE_NAME}"
 
   if aws ec2 describe-key-pairs \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --key-name ${CBD_SSH_KEY_NAME} >/dev/null 2>&1; then
-    echo "EC2 key-pair ${CBD_SSH_KEY_NAME} already exists, using existing key-pair."
-    if [ ! -f ${CBD_SSH_KEY_FILE} ]; then
-      echo "WARNING: Missing EC2 key-pair file ${CBD_SSH_KEY_FILE}. This file is needed for SSH access to EC2 nodes."
+    --key-name ${SSHKeyName} >/dev/null 2>&1; then
+    echo "EC2 key-pair ${SSHKeyName} already exists, using existing key-pair."
+    if [ ! -f ${SSHKeyFile} ]; then
+      echo "WARNING: Missing EC2 key-pair file ${SSHKeyFile}. This file is needed for SSH access to EC2 nodes."
     fi
   else
     umask 077;
     if aws ec2 create-key-pair \
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
-      --key-name ${CBD_SSH_KEY_NAME} \
+      --key-name ${SSHKeyName} \
       --query KeyMaterial \
-      --output text > ${CBD_SSH_KEY_FILE}; then
-      echo "Created ec2 key-pair ${CBD_SSH_KEY_NAME} and key file ${CBD_SSH_KEY_FILE}"
+      --output text > ${SSHKeyFile}; then
+      echo "Created ec2 key-pair ${SSHKeyName} and key file ${SSHKeyFile}"
     else
       echo "Failed to create ec2 key-pair"
       exit 1
     fi
   fi
 
-  echo "Creating CloudFormation stack cloudbd-regional-${CBD_REGION}"
+  echo "Creating CloudFormation stack ${RemoteStackName} in ${CBD_REGION}"
 
   aws cloudformation create-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --template-body file://templates/cloudbd-regional.yml \
-    --stack-name cloudbd-regional-${CBD_REGION} \
+    --template-body file://templates/cloudbd-resources.yml \
+    --stack-name ${RemoteStackName} \
     --capabilities CAPABILITY_IAM \
     --parameters \
         ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} \
         ParameterKey=AvailabilityZones,ParameterValue=\"${CBD_ALL_AVAILABILITY_ZONES}\" > /dev/null
 
-  [ $? -eq 0 ] && cloudformation_tail cloudbd-regional-${CBD_REGION} || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${RemoteStackName} || exit $?
 
-  get_stack_outputs cloudbd-regional-${CBD_REGION}
+  get_stack_outputs ${RemoteStackName}
   local BucketName=$(grep BucketName <<< "${Outputs}" | awk '{print $2}')
   local UserName=$(grep UserName <<< "${Outputs}" | awk '{print $2}')
 
@@ -758,7 +804,7 @@ create_region() {
   local SecretKey=$(awk '{print $2}' <<< "${AccessKeyOutput}")
 
   umask 077;
-  cat <<- EOF > config/${CBD_REGION}.conf
+  cat <<- EOF > ${RemoteConfFile}
 	type = s3_v4
 	endpoint_url = http://s3.${CBD_REGION}.amazonaws.com
 	region = ${CBD_REGION}
@@ -767,13 +813,13 @@ create_region() {
 	secret_key = ${SecretKey}
 	EOF
 
-  echo "Created CloudBD configuration file ${CBD_REGION}.conf"
+  echo "Created CloudBD configuration file ${RemoteConfFile}"
 
   aws s3 cp \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
     --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-    config/${CBD_REGION}.conf s3://${BucketName}/config/${CBD_REGION}.conf
+    ${RemoteConfFile} s3://${BucketName}/config/${CBD_REMOTE_NAME}.conf
 
   aws s3 cp \
     --profile ${CBD_PROFILE} \
@@ -781,27 +827,27 @@ create_region() {
     --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
     config/credentials.json s3://${BucketName}/config/credentials.json
 
-  echo "${CBD_REGION} created successfully."
+  echo "Remote '${CBD_REMOTE_NAME}' created successfully in ${CBD_REGION}"
 }
 
-delete_region_help() {
+delete_remote_help() {
   cat <<- EOF
 	Usage:
-	   cfn-aio delete-region [options]
+	   cfn-aio delete-remote [options]
 
 	Description:
-	   The delete-region command deletes the AWS resources created by the
-	   create-region command. The AWS cli and CloudFormtion are used in the
+	   The delete-remote command deletes the AWS resources created by the
+	   create-remote command. The AWS cli and CloudFormtion are used in the
 	   process of deleting the resources. The AWS cli profile must have the
-	   rights to delete the resources outlined in the create-region command
+	   rights to delete the resources outlined in the create-remote command
 	   help.
 
 	   Prior to running this command, all CloudBD disks must be deleted so
 	   that the S3 bucket is empty. In addition, any EC2 instances created
-	   via the create-instance command must be deleted first.
+	   using this remote with the create-instance command must be deleted first.
 
 	   The S3 bucket is checked to ensure that all CloudBD disks have been
-	   deleted. If there are undeleted CloudBD disks, the delete-region
+	   deleted. If there are undeleted CloudBD disks, the delete-remote
 	   command will not proceed. CloudBD disks may be deleted using an EC2
 	   instance that has been created in the same region using the
 	   create-instance command. Do not delete the CloudBD disk data using
@@ -811,12 +857,12 @@ delete_region_help() {
 	   operations.
 
 	   When it has been confirmed no CloudBD disk data remains, the two
-	   uploaded configuration files from the create-region command are
+	   uploaded configuration files from the create-remote command are
 	   deleted from the S3 bucket and the CloudFormation stack is deleted
 	   via 'aws cloudformation delete-stack' command. After the stack has
-	   been deleted, the regional SSH key-pair will also be deleted.
+	   been deleted, the remote SSH key-pair will also be deleted.
 
-	   Upon the succesful completion of the delete-region command, all
+	   Upon the succesful completion of the delete-remote command, all
 	   AWS resources created via the cfn-aio tool will have been removed
 	   from the region.
 
@@ -829,16 +875,19 @@ delete_region_help() {
 	   	The AWS cli profile to use.
 
 	   --region <AWS region>
-	   	The region to delete CloudBD regional resources in.
+	   	The AWS region where the remote was created.
+
+	   --remote-name <remote name>
+	   	The remote name that was used to create the remote.
 	EOF
   exit 0
 }
 
-delete_region() {
+delete_remote() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       help)
-        shift; delete_region_help;;
+        shift; delete_remote_help;;
       --profile)
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
@@ -863,21 +912,37 @@ delete_region() {
           exit 1
         fi
         ;;
+      --remote-name)
+        if validate_name "$2"; then
+          CBD_REMOTE_NAME="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --remote_name: Invalid remote name provided.
+
+		Remote names must start with a letter and contain alpha-numeric characters and
+		hyphens only. 32 characters max.
+		EOF
+          exit 1
+        fi
+	;;
       *)
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
 	--profile <AWS cli profile>
 	--region <AWS region>
+	--remote-name <remote name>
 	EOF
         )";;
     esac
   done
 
-  local CBD_SSH_KEY_FILE="./config/cloudbd-${CBD_REGION}-key.pem"
-  local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
+  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
+  local SSHKeyFile="config/${SSHKeyName}.pem"
+  local RemoteConfFile="config/${CBD_REMOTE_NAME}-${CBD_REGION}.conf"
+  local RemoteStackName="cloudbd-resources-${CBD_REMOTE_NAME}"
 
-  get_stack_outputs cloudbd-regional-${CBD_REGION}
+  get_stack_outputs ${RemoteStackName}
   local BucketName=$(grep BucketName <<< "${Outputs}" | awk '{print $2}')
 
   # if stack failed to create the bucket, then skip checking for undeleted disks
@@ -894,21 +959,21 @@ delete_region() {
       --recursive \
       s3://${BucketName}/cloudbd/ > /dev/null; then
       cat <<- EOF
-	ERROR: Can not delete regional resources while CloudBD disks remain
+	ERROR: Can not delete remote resources while CloudBD disks remain
 	configured. Please delete your CloudBD disks before deleting your
-	regional resources using a CloudBD EC2 instance.
+	remote resources using a CloudBD EC2 instance.
 
-	   Stop and unconfigure all CloudBD disks in this region
+	   Stop and unconfigure all CloudBD disks in this remote
 	      https://www.cloudbd.io/docs/gs-manage-disks.html#detach-a-disk
 
 	   To list all existing disks:
-	      cloudbd list ${CBD_REGION}
+	      cloudbd list ${CBD_REMOTE_NAME}
 
 	   To delete a CloudBD disk that is not running:
-	      cloudbd destroy ${CBD_REGION}:mydiskname
+	      cloudbd destroy ${CBD_REMOTE_NAME}:mydiskname
 
 	When all disks have been stopped and deleted you can delete the
-	CloudBD instance and regional resources.
+	CloudBD instance and remote resources.
 	EOF
       exit 1
     fi
@@ -923,60 +988,60 @@ delete_region() {
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
       --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-      s3://${BucketName}/config/${CBD_REGION}.conf > /dev/null
+      s3://${BucketName}/config/${CBD_REMOTE_NAME}.conf > /dev/null
   fi
 
-  echo "Deleting CloudFormation stack cloudbd-regional-${CBD_REGION}"
+  echo "Deleting CloudFormation stack ${RemoteStackName} in ${CBD_REGION}"
 
   aws cloudformation delete-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --stack-name cloudbd-regional-${CBD_REGION}
+    --stack-name ${RemoteStackName}
 
-  [ $? -eq 0 ] && cloudformation_tail cloudbd-regional-${CBD_REGION} deleting || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${RemoteStackName} deleting || exit $?
 
-  echo "Deleted stack cloudbd-regional-${CBD_REGION}"
+  echo "Deleted stack ${RemoteStackName} in ${CBD_REGION}"
 
-  if [ -f ./config/${CBD_REGION}.conf ]; then
-    rm ./config/${CBD_REGION}.conf && echo "Deleted file ./config/${CBD_REGION}.conf"
+  if [ -f ${RemoteConfFile} ]; then
+    rm ${RemoteConfFile} && echo "Deleted file ${RemoteConfFile}"
   fi
 
   if aws ec2 describe-key-pairs \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --key-name ${CBD_SSH_KEY_NAME} >/dev/null 2>&1; then
+    --key-name ${SSHKeyName} >/dev/null 2>&1; then
     if aws ec2 delete-key-pair \
       --profile ${CBD_PROFILE} \
       --region ${CBD_REGION} \
-      --key-name ${CBD_SSH_KEY_NAME}; then
-      echo "Deleted EC2 key pair ${CBD_SSH_KEY_NAME}"
-      if [ -f "${CBD_SSH_KEY_FILE}" ]; then
-        rm ${CBD_SSH_KEY_FILE} && echo "Deleted file ${CBD_SSH_KEY_FILE}"
+      --key-name ${SSHKeyName}; then
+      echo "Deleted EC2 key pair ${SSHKeyName}"
+      if [ -f "${SSHKeyFile}" ]; then
+        rm ${SSHKeyFile} && echo "Deleted file ${SSHKeyFile}"
       fi
     else
-      echo "Failed to delete key pair ${CBD_SSH_KEY_NAME}"
+      echo "Failed to delete key pair ${SSHKeyName}"
     fi
   else
-    if [ -f "${CBD_SSH_KEY_FILE}" ]; then
-      rm ${CBD_SSH_KEY_FILE} && echo "Deleted file ${CBD_SSH_KEY_FILE}"
+    if [ -f "${SSHKeyFile}" ]; then
+      rm ${SSHKeyFile} && echo "Deleted file ${SSHKeyFile}"
     fi
   fi
 }
 
-update_region_help() {
+update_remote_help() {
   cat <<- EOF
 	Usage:
-	   cfn-aio update-region --ssh-cidr <cidr range> [options]
+	   cfn-aio update-remote --ssh-cidr <cidr range> [options]
 
 	Description:
-	   The update-region command updates previously created AWS resources
-	   via the create-region command. This command can be used to modify
-	   the SSH IpV4 Cidr range of an existing region or to update the region
-	   should changes be made to the regional template.
+	   The update-remote command updates previously created AWS resources
+	   via the create-remote command. This command can be used to modify
+	   the SSH IpV4 Cidr range of an existing remote or to update the remote
+	   should changes be made to the remote template.
 
 	   The resources are updated by issuing an 'aws cloudformation
 	   update-stack' command. The AWS cli profile must have the rights to
-	   update the CloudFormation resources outlined in the create-region
+	   update the CloudFormation resources outlined in the create-remote
 	   command help.
 
 	Options:
@@ -995,16 +1060,19 @@ update_region_help() {
 	   	The AWS cli profile to use.
 
 	   --region <AWS region>
-	   	The region to update CloudBD regional resources in.
+	   	The AWS region to update CloudBD resources in.
+
+	   --remote-name <remote name>
+	   	The remote name that was used to create the remote.
 	EOF
   exit 0
 }
 
-update_region() {
+update_remote() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       help)
-        shift; update_region_help;;
+        shift; update_remote_help;;
       --profile)
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
@@ -1029,6 +1097,19 @@ update_region() {
           exit 1
         fi
         ;;
+      --remote-name)
+        if validate_name "$2"; then
+          CBD_REMOTE_NAME="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --remote_name: Invalid remote name provided.
+
+		Remote names must start with a letter and contain alpha-numeric characters and
+		hyphens only. 32 characters max.
+		EOF
+          exit 1
+        fi
+	;;
       --ssh-cidr)
 	if validate_cidr "$2"; then
           CBD_SSH_CIDR_RANGE_NEW="$2"; shift 2;
@@ -1043,6 +1124,7 @@ update_region() {
 
 	--profile <AWS cli profile>
 	--region <AWS region>
+	--remote-name <remote name>
 	--ssh-cidr <cidr range>
 	EOF
         )";;
@@ -1054,22 +1136,23 @@ update_region() {
   fi
 
   CBD_SSH_CIDR_RANGE=${CBD_SSH_CIDR_RANGE_NEW}
+  local RemoteStackName="cloudbd-resources-${CBD_REMOTE_NAME}"
 
   build_all_availability_zones
 
-  echo "Updating CloudFormation stack cloudbd-regional-${CBD_REGION}"
+  echo "Updating CloudFormation stack ${RemoteStackName}"
 
   aws cloudformation update-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --template-body file://templates/cloudbd-regional.yml \
-    --stack-name cloudbd-regional-${CBD_REGION} \
+    --template-body file://templates/cloudbd-resources.yml \
+    --stack-name ${RemoteStackName} \
     --capabilities CAPABILITY_IAM \
     --parameters \
         ParameterKey=SSHLocation,ParameterValue=${CBD_SSH_CIDR_RANGE} \
         ParameterKey=AvailabilityZones,ParameterValue=\"${CBD_ALL_AVAILABILITY_ZONES}\" > /dev/null
 
-  [ $? -eq 0 ] && cloudformation_tail cloudbd-regional-${CBD_REGION} || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${RemoteStackName} || exit $?
 }
 
 create_instance_help() {
@@ -1081,38 +1164,38 @@ create_instance_help() {
 	   The create-instance command creates an EC2 instance and configures it
 	   with CloudBD software.  The resources are created using the AWS
 	   cli using either the default configured profile or the profile
-           provided via the --profile option. The AWS cli and a CloudFormation
+	   provided via the --profile option. The AWS cli and a CloudFormation
 	   template are used in this process. The AWS cli profile must have the
 	   rights to create an EC2 instance.
 
-	   The instance is created using the regional SSH key-pair and
+	   The instance is created using the remote SSH key-pair and
 	   SecurityGroup which allows SSH access to the instance (limited by the
-           SSH IpV4 Cidr address range). You may SSH into the instance in the
+	   SSH IpV4 Cidr address range). You may SSH into the instance in the
 	   typical manor, or utilize the 'cfn-aio ssh' command for convenience.
 	   The SSH private key for the region will be located here after the
-	   create-region command has been run:
+	   create-remote command has been run:
 
-	   config/cloudbd-${CBD_REGION}-key.pem
+	      config/cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key.pem
 
 	   The instance will be ready to create CloudBD disks and begin using
 	   them. Please see the CloudBD documentation on how to create and
 	   manage CloudBD disks:
 
-	   https://www.cloudbd.io/docs/gs-manage-disks.html
+	      https://www.cloudbd.io/docs/gs-manage-disks.html
 
 	   Instances may be deleted by using the delete-instance command. It is
 	   recommended that the CloudBD disks be detached and deleted prior to
-	   deleting an instance. CloudBD disk data will remain in the regional
+	   deleting an instance. CloudBD disk data will remain in the remote
 	   S3 bucket until they are deleted. Undeleted disks will prevent the
-	   regional S3 bucket from being deleted.
+	   remote S3 bucket from being deleted.
 
 	Options:
 	   Required options:
 
 	   --name <instance name>
-	   	A unique name for the instance. Must start with a letter and
-	   	contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
+	   	A unique name for the instance within the region. It must start
+	   	with a letter and contain alpha-numeric characters and hyphens
+	   	only. 32 characters max.
 
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
@@ -1123,6 +1206,9 @@ create_instance_help() {
 
 	   --region <AWS region>
 	   	The region to create CloudBD EC2 instance in.
+
+	   --remote-name <remote name>
+	   	The remote name to associate the newly created instance to.
 
 	   --availability-zone <zone letter>
 	   	The availability zone letter in the region. Must be a-f and be
@@ -1180,6 +1266,19 @@ create_instance() {
           exit 1
         fi
         ;;
+      --remote-name)
+        if validate_name "$2"; then
+          CBD_REMOTE_NAME="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --remote_name: Invalid remote name provided.
+
+		Remote names must start with a letter and contain alpha-numeric characters and
+		hyphens only. 32 characters max.
+		EOF
+          exit 1
+        fi
+	;;
       --os)
 	if validate_os "$2"; then
           CBD_EC2_OS="$2"; shift 2;
@@ -1218,6 +1317,7 @@ create_instance() {
 	--name <instance name>
 	--profile <AWS cli profile>
 	--region <AWS region>
+	--remote-name <remote name>
 	--availability-zone <zone letter>
 	--instance-type <type>
 	--os <os name>
@@ -1240,14 +1340,15 @@ create_instance() {
     exit 1
   fi
 
-  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
-  local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
+  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
+  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
+  local RemoteStackName="cloudbd-resources-${CBD_REMOTE_NAME}"
 
-  get_stack_outputs cloudbd-regional-${CBD_REGION}
+  get_stack_outputs ${RemoteStackName}
   local BucketName=$(grep BucketName <<< "${Outputs}" | awk '{print $2}')
 
   if [[ ! -n ${BucketName} ]]; then
-    echo "cfn-aio: error: missing required region bucket: probably due to create-region failure"
+    echo "cfn-aio: error: missing required region bucket: probably due to create-remote failure"
     exit 1
   fi
 
@@ -1263,25 +1364,26 @@ create_instance() {
     --region ${CBD_REGION} \
     --expires-in 600 \
     --endpoint-url https://s3.${CBD_REGION}.amazonaws.com \
-    s3://${BucketName}/config/${CBD_REGION}.conf)"
+    s3://${BucketName}/config/${CBD_REMOTE_NAME}.conf)"
 
-  echo "Creating CloudFormation stack ${EC2_STACK_NAME}"
+  echo "Creating CloudFormation stack ${EC2StackName} in ${CBD_REGION}"
 
   aws cloudformation create-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --template-body file://templates/cloudbd-${CBD_EC2_OS}.yml \
-    --stack-name ${EC2_STACK_NAME} \
+    --template-body file://templates/cloudbd-ec2-${CBD_EC2_OS}.yml \
+    --stack-name ${EC2StackName} \
     --disable-rollback \
     --parameters \
         ParameterKey=InstanceName,ParameterValue=${CBD_EC2_NAME} \
-        ParameterKey=KeyName,ParameterValue=${CBD_SSH_KEY_NAME} \
+        ParameterKey=RemoteName,ParameterValue=${CBD_REMOTE_NAME} \
+        ParameterKey=KeyName,ParameterValue=${SSHKeyName} \
         ParameterKey=CredentialsURL,ParameterValue=${CredentialsURL} \
         ParameterKey=RemoteConfURL,ParameterValue=${RemoteConfURL} \
         ParameterKey=InstanceType,ParameterValue=${CBD_EC2_INSTANCE_TYPE} \
         ParameterKey=AvailabilityZone,ParameterValue=${CBD_AVAILABILITY_ZONE} > /dev/null
 
-  [ $? -eq 0 ] && cloudformation_tail ${EC2_STACK_NAME} || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${EC2StackName} || exit $?
 }
 
 delete_instance_help() {
@@ -1291,28 +1393,28 @@ delete_instance_help() {
 
 	Description:
 	   The delete-instance command deletes an instance previously created
-	   by the create-instance command.  The resources are deleted using the
+	   by the create-instance command.  The instance is deleted using the
 	   AWS cli using either the default configured profile or the profile
-           provided via the --profile option. The AWS cli and CloudFormation
+	   provided via the --profile option. The AWS cli and CloudFormation
 	   are used in this process. The AWS cli profile must have the rights
 	   to delete an EC2 instance using CloudFormation.
 
 	   It is recommended that the CloudBD disks be detached and deleted
 	   prior to deleting an instance. CloudBD disk data will remain in the
-	   regional S3 bucket until they are deleted. Undeleted disks will
-	   prevent the regional S3 bucket from being deleted. Do not delete the
+	   remote S3 bucket until they are deleted. Undeleted disks will
+	   prevent the remote S3 bucket from being deleted. Do not delete the
 	   CloudBD disk data using the AWS cli or the AWS web console. The
 	   steps for detaching and deleting CloudBD disks may be found here:
 
-	   https://www.cloudbd.io/docs/gs-manage-disks.html
+	      https://www.cloudbd.io/docs/gs-manage-disks.html
 
 	Options:
 	   Required options:
 
 	   --name <instance name>
-	   	The unique name for the instance. Must start with a letter and
-	   	contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
+	   	The unique name for the instance within the region. It must start
+	   	with a letter and contain alpha-numeric characters and hyphens
+	   	only. 32 characters max.
 
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
@@ -1322,7 +1424,7 @@ delete_instance_help() {
 	   	The AWS cli profile to use.
 
 	   --region <AWS region>
-	   	The region to delete the CloudBD EC2 instance.
+	   	The AWS region to delete CloudBD resources in.
 	EOF
   exit 0
 }
@@ -1385,16 +1487,16 @@ delete_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
-  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
+  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
 
-  echo "Deleting CloudFormation stack ${EC2_STACK_NAME}"
+  echo "Deleting CloudFormation stack ${EC2StackName} in ${CBD_REGION}"
 
   aws cloudformation delete-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --stack-name ${EC2_STACK_NAME}
+    --stack-name ${EC2StackName}
 
-  [ $? -eq 0 ] && cloudformation_tail ${EC2_STACK_NAME} deleting || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${EC2StackName} deleting || exit $?
 }
 
 update_instance_help() {
@@ -1512,12 +1614,13 @@ update_instance() {
   fi
   CBD_EC2_INSTANCE_TYPE=${CBD_EC2_INSTANCE_TYPE_NEW}
 
-  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
-  local CBD_SSH_KEY_NAME="cloudbd-${CBD_REGION}-key"
+  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
+  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
 
-  get_stack_outputs ${EC2_STACK_NAME}
+  get_stack_outputs ${EC2StackName}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
-  CBD_EC2_OS=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
+  local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
+  local RemoteName=$(grep RemoteName <<< "${Outputs}" | awk '{print $2}')
 
   if [[ ! -n ${InstanceId} ]]; then
     echo "cfn-aio: error: instance id: Unable to query instance id"
@@ -1536,20 +1639,21 @@ update_instance() {
     exit 1
   fi
 
-  echo "Updating CloudFormation stack ${EC2_STACK_NAME}"
+  echo "Updating CloudFormation stack ${EC2StackName} in ${CBD_REGION}"
 
   aws cloudformation update-stack \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
-    --template-body file://templates/cloudbd-${CBD_EC2_OS}.yml \
-    --stack-name ${EC2_STACK_NAME} \
+    --template-body file://templates/cloudbd-ec2-${OperatingSystem}.yml \
+    --stack-name ${EC2StackName} \
     --parameters \
         ParameterKey=InstanceName,ParameterValue=${CBD_EC2_NAME} \
-        ParameterKey=KeyName,ParameterValue=${CBD_SSH_KEY_NAME} \
+        ParameterKey=RemoteName,ParameterValue=${RemoteName} \
+        ParameterKey=KeyName,ParameterValue=${SSHKeyName} \
         ParameterKey=InstanceType,ParameterValue=${CBD_EC2_INSTANCE_TYPE} \
         ParameterKey=AvailabilityZone,ParameterValue=${Zone: -1} > /dev/null
 
-  [ $? -eq 0 ] && cloudformation_tail ${EC2_STACK_NAME} || exit $?
+  [ $? -eq 0 ] && cloudformation_tail ${EC2StackName} || exit $?
 }
 
 ssh_instance_help() {
@@ -1560,14 +1664,15 @@ ssh_instance_help() {
 	Description:
 	   The ssh command SSH's into an existing EC2 instance created with the
 	   create-instance command. Using the required --name argument together
-	   with the region the current public DNS address and operating system
+	   with the region, the current public DNS address and operating system
 	   is queryed using the AWS cli and an ssh command is executed with the
 	   following values:
 
-	   ssh -i config/cloudbd-<region>-key.pem \\
-	      <username>@<public dns> <ssh options>
+	      ssh -i config/cloudbd-<region>-<remote name>-key.pem \\
+	         <username>@<public dns> <ssh options>
 
-	   Where <region> is the region value for the instance, <username> is
+	   Where <region> is the region value for the instance, <remote name> is
+	   the name of the remote used when creating the instance, <username> is
 	   either 'ec2-user' for amzn1 instances or 'ubuntu' for Ubuntu
 	   instances, and <public dns> is the DNS address that was obtained by
 	   using the AWS cli.
@@ -1663,26 +1768,28 @@ ssh_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
-  local EC2_STACK_NAME="cloudbd-ec2-${CBD_EC2_NAME}"
+  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
+  local SSHKeyFile="config/${SSHKeyName}.pem"
+  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
 
-  get_stack_outputs ${EC2_STACK_NAME}
+  get_stack_outputs ${EC2StackName}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
-  CBD_EC2_OS=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
+  local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
 
-  local EC2_PUBLIC_DNS=$(aws ec2 describe-instances \
+  local EC2PublicDns=$(aws ec2 describe-instances \
     --profile ${CBD_PROFILE} \
     --region ${CBD_REGION} \
     --instance-ids ${InstanceId} \
     --query 'Reservations[].Instances[].PublicDnsName' \
     --output text)
 
-  if [[ ${CBD_EC2_OS} == "amzn1" ]]; then
-    CBD_EC2_USERNAME="ec2-user"
+  if [[ ${OperatingSystem} == "amzn1" ]]; then
+    local Username="ec2-user"
   else
-    CBD_EC2_USERNAME="ubuntu"
+    local Username="ubuntu"
   fi
 
-  exec ssh -i config/cloudbd-${CBD_REGION}-key.pem ${CBD_EC2_USERNAME}@${EC2_PUBLIC_DNS} ${EC2_SSH_ARGUMENTS}
+  exec ssh -i ${SSHKeyFile} ${Username}@${EC2PublicDns} ${EC2_SSH_ARGUMENTS}
 }
 
 if [[ $# -eq 0 ]]; then
@@ -1694,16 +1801,16 @@ case "$1" in
     shift; do_help;;
   configure)
     shift; configure "$@";;
-  create-region)
-    shift; create_region "$@";;
+  create-remote)
+    shift; create_remote "$@";;
   create-instance)
     shift; create_instance "$@";;
-  delete-region)
-    shift; delete_region "$@";;
+  delete-remote)
+    shift; delete_remote "$@";;
   delete-instance)
     shift; delete_instance "$@";;
-  update-region)
-    shift; update_region "$@";;
+  update-remote)
+    shift; update_remote "$@";;
   update-instance)
     shift; update_instance "$@";;
   ssh)
@@ -1713,11 +1820,11 @@ case "$1" in
 	cfn-aio: error: argument command: Invalid choice, valid choices are:
 
 	configure
-	create-region
+	create-remote
 	create-instance
-	delete-region
+	delete-remote
 	delete-instance
-	update-region
+	update-remote
 	update-instance
 	ssh
 	EOF

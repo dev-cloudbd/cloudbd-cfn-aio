@@ -1,11 +1,18 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudBD Amzn1 Template:
+Description: 'CloudBD Ubuntu 14.04/trusty Template:
   This template creates and configures an EC2 instance using the VPC,
-  S3 Bucket, IAM user and SSH key-pair from the regional template.'
+  S3 Bucket, IAM user and SSH key-pair from the remote template.'
 Parameters:
   InstanceName:
-    Description: The amzn1 unique name of the instance
+    Description: The Ubuntu 14.04/trusty unique name of the instance
+    Type: String
+    MinLength: '1'
+    MaxLength: '32'
+    AllowedPattern: "[a-zA-Z][a-zA-Z_0-9-]*"
+    ConstraintDescription: must start with an alphabetic character and contain only alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+  RemoteName:
+    Description: The remote name
     Type: String
     MinLength: '1'
     MaxLength: '32'
@@ -24,7 +31,7 @@ Parameters:
     Type: String
     Default: ""
   InstanceType:
-    Description: CloudBD amzn1 EC2 instance type
+    Description: EC2 instance type
     Type: String
   AvailabilityZone:
     Description: The Availability Zone letter to create the EC2 instance
@@ -36,50 +43,44 @@ Parameters:
 Mappings:
   AWSRegionArch2AMI:
     us-east-1:
-      HVM64: ami-0ff8a91507f77f867
+      HVM64: ami-05a36d3b9aa4a17ac
     us-west-2:
-      HVM64: ami-a0cfeed8
+      HVM64: ami-0ea790e761025f9ce
     us-west-1:
-      HVM64: ami-0bdb828fd58c52235
+      HVM64: ami-056411f6be4840844
     eu-west-1:
-      HVM64: ami-047bb4163c506cd98
+      HVM64: ami-02699dba41e68180a
     eu-west-2:
-      HVM64: ami-f976839e
+      HVM64: ami-024279d2324df257e
     eu-west-3:
-      HVM64: ami-0ebc281c20e89ba4b
+      HVM64: ami-0b49b417468d0e8d1
     eu-central-1:
-      HVM64: ami-0233214e13e500f77
+      HVM64: ami-02bcc91bbf9535b00
     ap-northeast-1:
-      HVM64: ami-06cd52961ce9f0d85
+      HVM64: ami-0be9269b44d4b26c1
     ap-northeast-2:
-      HVM64: ami-0a10b2721688ce9d2
-    ap-northeast-3:
-      HVM64: ami-0d98120a9fb693f07
+      HVM64: ami-017332df4b882edd2
     ap-southeast-1:
-      HVM64: ami-08569b978cc4dfa10
+      HVM64: ami-09592de3725419634
     ap-southeast-2:
-      HVM64: ami-09b42976632b27e9b
+      HVM64: ami-0d9ca8d416482590e
     ap-south-1:
-      HVM64: ami-0912f71e06545ad88
+      HVM64: ami-09dcf5653a185f5df
     us-east-2:
-      HVM64: ami-0b59bfac6be064b78
+      HVM64: ami-0970ab4b97fe3a913
     ca-central-1:
-      HVM64: ami-0b18956f
+      HVM64: ami-031b4238707e9edc0
     sa-east-1:
-      HVM64: ami-07b14488da8ea02a0
-    cn-north-1:
-      HVM64: ami-0a4eaf6c4454eda75
-    cn-northwest-1:
-      HVM64: ami-6b6a7d09
+      HVM64: ami-01c858a779ba95305
 Resources:
-  CloudBDAmzn1Instance:
+  CloudBDTrustyInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - Fn::ImportValue: !Sub 'cloudbd-regional-${AWS::Region}-SecurityGroup'
+        - Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-SecurityGroup' ] ]
       SubnetId:
-        Fn::ImportValue: !Join [ '', ['cloudbd-regional-', !Ref 'AWS::Region', '-subnet-', !Ref AvailabilityZone ] ]
+        Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-subnet-', !Ref AvailabilityZone ] ]
       KeyName: !Ref KeyName
       ImageId:
         Fn::FindInMap:
@@ -94,29 +95,40 @@ Resources:
         Fn::Base64:
           !Sub |
             #!/bin/bash -x
+            export DEBIAN_FRONTEND=noninteractive
+
+            # The regional <region>.ec2.archive.ubuntu.com sources frequently
+            # are not responsive or very very slow causing instances to time-out
+            # so let's not use them.
+            sed -i 's/http:.*\.ec2\.archive\.ubuntu\.com\/ubuntu\//mirror:\/\/mirrors\.ubuntu\.com\/mirrors\.txt/' /etc/apt/sources.list
 
             # upgrade packages and kernel
-            yum update -y
+            apt-get update
+            apt-get -y dist-upgrade
 
             # install cfn bootstrap package
-            yum install -y aws-cfn-bootstrap
+            apt-get -y install python-pip
+            pip install ndg-httpsclient
+            pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            ln -s /usr/local/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+            chmod +x /usr/local/init/ubuntu/cfn-hup
 
             # perform AWS::CloudFormation::Init tasks
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDAmzn1Instance --configsets default --region ${AWS::Region}
+            /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDTrustyInstance --configsets default --region ${AWS::Region}
 
             # reboot if needed and signal completion to cloudfront
             RET=$?
-            if needs-restarting -r; then
-              /opt/aws/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDAmzn1Instance --region ${AWS::Region}
-            else
+            if [ -e /var/run/reboot-required ]; then
               cat <<- EOF > /etc/cron.d/cfn-signal
             	SHELL=/bin/bash
             	PATH=/sbin:/bin:/usr/sbin:/usr/bin
             	MAILTO=root
             	HOME=/
-            	@reboot root { /opt/aws/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDAmzn1Instance --region ${AWS::Region}; rm /etc/cron.d/cfn-signal; } > /dev/null
+            	@reboot root { /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDTrustyInstance --region ${AWS::Region}; rm /etc/cron.d/cfn-signal; } > /dev/null
             	EOF
               reboot
+            else
+              /usr/local/bin/cfn-signal -e ${!RET} --stack ${AWS::StackName} --resource CloudBDTrustyInstance --region ${AWS::Region}
             fi
     Metadata:
       AWS::CloudFormation::Init:
@@ -141,8 +153,8 @@ Resources:
               content: !Sub |
                 [cfn-auto-reloader-hook]
                 triggers=post.update
-                path=Resources.CloudBDAmzn1Instance.Metadata
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDAmzn1Instance --configsets default --region ${AWS::Region}
+                path=Resources.CloudBDTrustyInstance.Metadata
+                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource CloudBDTrustyInstance --configsets default --region ${AWS::Region}
                 runas=root
               mode: "000400"
               owner: "root"
@@ -157,11 +169,21 @@ Resources:
                   - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
         RepoInstall:
           files:
-            /etc/yum.repos.d/cloudbd.repo:
-              source: https://repo.cloudbd.io/amzn1/cloudbd.repo
+            /etc/apt/sources.list.d/cloudbd.list:
+              source: https://repo.cloudbd.io/trusty/cloudbd.list
               mode: "000644"
               owner: "root"
               group: "root"
+            /etc/apt/trusted.gpg.d/cloudbd.gpg:
+              source: https://repo.cloudbd.io/cloudbd-keyring.gpg
+              mode: "000644"
+              owner: "root"
+              group: "root"
+          commands:
+            01-apt-update:
+              command: !Sub |
+                set -xe
+                apt-get update
         Install:
           files:
             /etc/sysctl.d/20-cloudbd.conf:
@@ -170,11 +192,12 @@ Resources:
               mode: "000644"
               owner: "root"
               group: "root"
-          packages:
-            yum:
-              cbd-client: []
           commands:
-            01-remote-conf:
+            01-packages:
+              command: !Sub |
+                set -xe
+                apt-get install -y cbd-client
+            02-remote-conf:
               command: !Sub
                 - |
                   set -xe
@@ -186,8 +209,8 @@ Resources:
                     chown root:cloudbd ${!ConfFile}
                   fi
                 - ConfURL: !Ref RemoteConfURL
-                  ConfFile: !Sub '/etc/cloudbd/remotes.d/${AWS::Region}.conf'
-            02-creds:
+                  ConfFile: !Join [ '', ['/etc/cloudbd/remotes.d/', !Ref RemoteName, '.conf' ] ]
+            03-creds:
               command: !Sub
                 - |
                   set -xe
@@ -200,11 +223,11 @@ Resources:
                   fi
                 - ConfURL: !Ref CredentialsURL
                   ConfFile: /etc/cloudbd/credentials.json
-            03-cloudbd-group:
+            04-cloudbd-group:
               command: !Sub |
                 set -xe
-                usermod -a -G cloudbd ec2-user
-            04-sysctls:
+                usermod -a -G cloudbd ubuntu
+            05-sysctls:
               command: !Sub |
                 set -xe
                 sysctl vm.dirty_background_bytes=2097152
@@ -214,7 +237,10 @@ Resources:
 Outputs:
   InstanceId:
     Description: InstanceId of the newly created EC2 instance
-    Value: !Ref CloudBDAmzn1Instance
+    Value: !Ref CloudBDTrustyInstance
   OperatingSystem:
     Description: Operating system name
-    Value: 'amzn1'
+    Value: 'trusty'
+  RemoteName:
+    Description: Remote name this instance was created in
+    Value: !Ref RemoteName

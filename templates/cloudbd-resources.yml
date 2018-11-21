@@ -1,8 +1,8 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudBD Region Template:
-  This template configures a region with an S3 bucket, VPC with S3 endpoint and
-  a IAM user with access to the bucket for testing CloudBD disks.'
+Description: 'CloudBD Remote Resources Template:
+  This template configures a CloudBD remote with an S3 bucket, VPC with S3
+  endpoint and a IAM user with access to the bucket for testing CloudBD disks.'
 Parameters:
   SSHLocation:
     Description: The IP address range that can be used to SSH to the EC2 instances
@@ -74,7 +74,7 @@ Resources:
       InternetGatewayId: !Ref CloudBDInternetGateway
   CloudBDRouteTable:
     Type: AWS::EC2::RouteTable
-    Properties: 
+    Properties:
       VpcId: !Ref CloudBDVPC
   CloudBDDefaultRoute:
     Type: AWS::EC2::Route
@@ -94,7 +94,7 @@ Resources:
   CloudBDSubnetAAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneA
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetA
   CloudBDSubnetB:
@@ -108,7 +108,7 @@ Resources:
   CloudBDSubnetBAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneB
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetB
   CloudBDSubnetC:
@@ -122,7 +122,7 @@ Resources:
   CloudBDSubnetCAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneC
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetC
   CloudBDSubnetD:
@@ -136,7 +136,7 @@ Resources:
   CloudBDSubnetDAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneD
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetD
   CloudBDSubnetE:
@@ -150,7 +150,7 @@ Resources:
   CloudBDSubnetEAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneE
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetE
   CloudBDSubnetF:
@@ -164,7 +164,7 @@ Resources:
   CloudBDSubnetFAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Condition: AvailabilityZoneF
-    Properties: 
+    Properties:
       RouteTableId: !Ref CloudBDRouteTable
       SubnetId: !Ref CloudBDSubnetF
   CloudBDS3Endpoint:
