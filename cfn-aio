@@ -1768,13 +1768,15 @@ ssh_instance() {
     usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
   fi
 
-  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
-  local SSHKeyFile="config/${SSHKeyName}.pem"
   local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
 
   get_stack_outputs ${EC2StackName}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
   local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
+  local RemoteName=$(grep RemoteName <<< "${Outputs}" | awk '{print $2}')
+
+  local SSHKeyName="cloudbd-${RemoteName}-${CBD_REGION}-key"
+  local SSHKeyFile="config/${SSHKeyName}.pem"
 
   local EC2PublicDns=$(aws ec2 describe-instances \
     --profile ${CBD_PROFILE} \
