@@ -1615,12 +1615,12 @@ update_instance() {
   CBD_EC2_INSTANCE_TYPE=${CBD_EC2_INSTANCE_TYPE_NEW}
 
   local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
-  local SSHKeyName="cloudbd-${CBD_REMOTE_NAME}-${CBD_REGION}-key"
 
   get_stack_outputs ${EC2StackName}
   local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
   local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
   local RemoteName=$(grep RemoteName <<< "${Outputs}" | awk '{print $2}')
+  local SSHKeyName="cloudbd-${RemoteName}-${CBD_REGION}-key"
 
   if [[ ! -n ${InstanceId} ]]; then
     echo "cfn-aio: error: instance id: Unable to query instance id"
