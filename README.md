@@ -32,7 +32,7 @@ Follow the steps here to create and deploy your first CloudBD instance in minute
   Default remote name [remote]:
   Default availability zone letter in us-east-2 for EC2 [a]:
   Default IpV4 address range in CIDR format that may SSH in to EC2 instances [0.0.0.0/0]:
-  Default instance type for EC2 [t3.micro]:
+  Default instance type for EC2 [t3.small]:
   Default operating system for EC2 [amzn1]:
   ```
 

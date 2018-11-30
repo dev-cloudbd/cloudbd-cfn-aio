@@ -36,7 +36,7 @@ CBD_REMOTE_NAME="${CBD_REMOTE_NAME:-remote}"
 CBD_REGION="${CBD_REGION:-us-east-2}"
 CBD_AVAILABILITY_ZONE="${CBD_AVAILABILITY_ZONE:-a}"
 CBD_SSH_CIDR_RANGE="${CBD_SSH_CIDR_RANGE:-0.0.0.0/0}"
-CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE:-t3.micro}"
+CBD_EC2_INSTANCE_TYPE="${CBD_EC2_INSTANCE_TYPE:-t3.small}"
 CBD_EC2_OS="${CBD_EC2_OS:-amzn1}"
 
 validate_region() {
@@ -356,7 +356,7 @@ configure_help() {
 
 	   CBD_SSH_CIDR_RANGE - This value specifies an IPv4 CIDR range that
 	   limits the source IPv4 addresses that are allowed to SSH to the EC2
-	   instances.  More specifically, it is the AWS::EC2::SecurityGroup->
+	   instances. More specifically, it is the AWS::EC2::SecurityGroup->
 	   SecurityGroupIngress->CidrIp value for the security group that
 	   instances created by the create-instance command will use. The
 	   default value when unconfigured is "0.0.0.0/0", which allows all
@@ -364,7 +364,7 @@ configure_help() {
 
 	   CBD_EC2_INSTANCE_TYPE - This is the instance type that will be used
 	   by default when creating EC2 instances using the create-instance
-	   command.  The default value when unconfigured is "t3.micro".
+	   command. The default value when unconfigured is "t3.small".
 
 	   CBD_EC2_OS - This is the operating system that will be used by
 	   default when creating EC2 instances using the create-instance
@@ -634,7 +634,7 @@ create_remote_help() {
 
 	   IAM User - This user is created with an inline policy that grants it
 	   the rights needed for CloudBD disks to use the S3 bucket to store
-	   data.  The user name is not specified in the template so a unique
+	   data. The user name is not specified in the template so a unique
 	   name will be created by CloudFormation. After the stack is created,
 	   an access key is created using 'aws iam create-access-key' and the
 	   AccessKeyId and SecretAccessKey are saved in the CloudBD remote conf
@@ -1162,7 +1162,7 @@ create_instance_help() {
 
 	Description:
 	   The create-instance command creates an EC2 instance and configures it
-	   with CloudBD software.  The resources are created using the AWS
+	   with CloudBD software. The resources are created using the AWS
 	   cli using either the default configured profile or the profile
 	   provided via the --profile option. The AWS cli and a CloudFormation
 	   template are used in this process. The AWS cli profile must have the
@@ -1393,7 +1393,7 @@ delete_instance_help() {
 
 	Description:
 	   The delete-instance command deletes an instance previously created
-	   by the create-instance command.  The instance is deleted using the
+	   by the create-instance command. The instance is deleted using the
 	   AWS cli using either the default configured profile or the profile
 	   provided via the --profile option. The AWS cli and CloudFormation
 	   are used in this process. The AWS cli profile must have the rights
