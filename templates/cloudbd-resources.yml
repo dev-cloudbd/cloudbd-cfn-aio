@@ -31,6 +31,12 @@ Conditions:
 Resources:
   CloudBDS3Bucket:
     Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
   CloudBDTestUser:
     Type: AWS::IAM::User
     Properties:
