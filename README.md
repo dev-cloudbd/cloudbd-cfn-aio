@@ -76,7 +76,7 @@ Follow the steps here to create your first CloudBD instance and disk in minutes.
   sudo mount /mnt
   ```
 
-  **The `_netdev` option is required for CloudBD disk entries in fstab to ensure the instance restarts correctly.** The `discard` option is recommended to free up unused storage on S3 when files are deleted. Additional detailed information about the above commands can be found in the [CloudBD documentation pages](https://www.cloudbd.io/docs/dri-options.html#filesystems-etc-fstab).
+  **The `_netdev` option is required for CloudBD disk entries in fstab to ensure the instance restarts correctly.** The `discard` option is recommended to free up unused storage on S3 when files are deleted. Additional detailed information about the above commands can be found in the [CloudBD documentation pages](https://www.cloudbd.io/docs/dri-options.html#filesystems).
 
   Your first CloudBD disk is now mounted and ready for use at `/mnt`. Data stored under `/mnt` is stored in an S3 bucket that was created with the `create remote` command in step 4. AWS S3 use and data storage charges apply to data stored on CloudBD disks.
 
