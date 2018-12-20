@@ -107,7 +107,7 @@ build_all_availability_zones() {
 
 validate_os() {
   case "$1" in
-    amzn1|trusty|xenial|bionic)
+    amzn1|amzn2|trusty|xenial|bionic)
       return 0;;
     *)
       return 1;;
@@ -368,8 +368,8 @@ configure_help() {
 
 	   CBD_EC2_OS - This is the operating system that will be used by
 	   default when creating EC2 instances using the create-instance
-	   command. Supported operating systems are: amzn1, trusty, xenial,
-	   and bionic. The default value when unconfigured is "amzn1".
+	   command. Supported operating systems are: amzn1, amzn2, trusty,
+	   xenial, and bionic. The default value when unconfigured is "amzn1".
 
 	Options:
 	   --profile <AWS cli profile>
@@ -560,6 +560,7 @@ configure() {
 	Invalid or unsupported operating system provided. Supported operating systems are:
 
 	amzn1		Amazon Linux AMI
+	amzn2		Amazon Linux 2
 	trusty		Ubuntu 14.04 LTS / trusty
 	xenial		Ubuntu 16.04 LTS / xenial
 	bionic		Ubuntu 18.04 LTS / bionic
@@ -1219,7 +1220,7 @@ create_instance_help() {
 
 	   --os <os name>
 	   	The operating system to use for the EC2 instance. Supported
-	   	values are: amzn1, trusty, xenial, bionic.
+	   	values are: amzn1, amzn2, trusty, xenial, bionic.
 	EOF
   exit 0
 }
@@ -1288,6 +1289,7 @@ create_instance() {
 		Supported operating systems are:
 
 		amzn1		Amazon Linux AMI
+		amzn2		Amazon Linux 2
 		trusty		Ubuntu 14.04 LTS / trusty
 		xenial		Ubuntu 16.04 LTS / xenial
 		bionic		Ubuntu 18.04 LTS / bionic
@@ -1673,7 +1675,7 @@ ssh_instance_help() {
 
 	   Where <region> is the region value for the instance, <remote name> is
 	   the name of the remote used when creating the instance, <username> is
-	   either 'ec2-user' for amzn1 instances or 'ubuntu' for Ubuntu
+	   either 'ec2-user' for amzn1 and amzn2 instances or 'ubuntu' for Ubuntu
 	   instances, and <public dns> is the DNS address that was obtained by
 	   using the AWS cli.
 
@@ -1785,11 +1787,14 @@ ssh_instance() {
     --query 'Reservations[].Instances[].PublicDnsName' \
     --output text)
 
-  if [[ ${OperatingSystem} == "amzn1" ]]; then
-    local Username="ec2-user"
-  else
-    local Username="ubuntu"
-  fi
+  case "${OperatingSystem}" in
+    amzn1|amzn2|rhel7)
+      local Username="ec2-user";;
+    trusty|xenial|bionic)
+      local Username="ubuntu";;
+    centos7)
+      local Username="centos";;
+  esac
 
   exec ssh -i ${SSHKeyFile} ${Username}@${EC2PublicDns} ${EC2_SSH_ARGUMENTS}
 }

@@ -139,7 +139,7 @@ Resources:
                 [main]
                 stack=${AWS::StackName}
                 region=${AWS::Region}
-                interval=1
+                interval=15
                 verbose=true
               mode: "000400"
               owner: "root"
@@ -189,7 +189,7 @@ Resources:
                   ConfFile="${ConfFile}"
                   if [ -n "${!ConfURL}" ] && [ ! -f ${!ConfFile} ]; then
                     umask 027;
-                    wget -qO ${!ConfFile} ${!ConfURL}
+                    curl -sSfo ${!ConfFile} ${!ConfURL}
                     chown root:cloudbd ${!ConfFile}
                   fi
                 - ConfURL: !Ref RemoteConfURL
@@ -202,7 +202,7 @@ Resources:
                   ConfFile="${ConfFile}"
                   if [ -n "${!ConfURL}" ] && [ ! -f ${!ConfFile} ]; then
                     umask 027;
-                    wget -qO ${!ConfFile} ${!ConfURL}
+                    curl -sSfo ${!ConfFile} ${!ConfURL}
                     chown root:cloudbd ${!ConfFile}
                   fi
                 - ConfURL: !Ref CredentialsURL
