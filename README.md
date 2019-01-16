@@ -70,13 +70,15 @@ Follow the steps here to create your first CloudBD instance and disk in minutes.
   After attaching your first disk you may use the following commands to format it with ext4 and mount it to `/mnt`. If you changed the default remote name in step 3, please replace `remote` below with the remote name you set in the configure step.
 
   ```
-  sudo mkfs.ext4 /dev/mapper/remote:testdisk
-  echo '/dev/mapper/remote:testdisk /mnt ext4 _netdev,discard 0 0' | \
+  sudo mkfs.ext4 -b 4096 -T largefile \
+    -E stride=512,stripe_width=512,lazy_itable_init=0,lazy_journal_init=0,packed_meta_blocks=1 \
+    /dev/mapper/remote:testdisk
+  echo '/dev/mapper/remote:testdisk /mnt ext4 _netdev,discard,commit=30' | \
        sudo tee -a /etc/fstab
   sudo mount /mnt
   ```
 
-  **The `_netdev` option is required for CloudBD disk entries in fstab to ensure the instance restarts correctly.** The `discard` option is recommended to free up unused storage on S3 when files are deleted. Additional detailed information about the above commands can be found in the [CloudBD documentation pages](https://www.cloudbd.io/docs/dri-options.html#filesystems).
+  **The `_netdev` option is required for CloudBD disk entries in fstab to ensure the instance restarts correctly.** The `discard` option is recommended to free up unused storage on S3 when files are deleted. Additional detailed information about the above commands can be found in the [CloudBD documentation pages](https://www.cloudbd.io/docs/gs-filesystems.html).
 
   Your first CloudBD disk is now mounted and ready for use at `/mnt`. Data stored under `/mnt` is stored in an S3 bucket that was created with the `create remote` command in step 4. AWS S3 use and data storage charges apply to data stored on CloudBD disks.
 
