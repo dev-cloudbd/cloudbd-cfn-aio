@@ -308,6 +308,7 @@ do_help() {
 	   update-remote    Update remote resources
 	   update-instance  Update an EC2 instance
 	   ssh              SSH into an EC2 instance
+	   upload           Upload file(s) to an EC2 instance
 	EOF
   exit 0
 }
@@ -320,7 +321,7 @@ configure_help() {
 	Description:
 	   The configure command sets default options for cfn-aio. If this
 	   command is run with no arguments, you will be prompted for
-	   configuration values such as the default region and default AWS cli
+	   configuration values such as the default region and default AWS CLI
 	   profile to use. Values provided via arguments will be validated. If
 	   the validation of the value fails, you will be prompted for a valid
 	   value.
@@ -336,7 +337,7 @@ configure_help() {
 	Configuration Variables:
 	   The following environment variables are supported in the config file:
 
-	   CBD_PROFILE - This is the AWS cli profile that will be used by
+	   CBD_PROFILE - This is the AWS CLI profile that will be used by
 	   default when creating, deleting, or updating resources. The default
 	   value when unconfigured is "default".
 
@@ -372,8 +373,8 @@ configure_help() {
 	   xenial, and bionic. The default value when unconfigured is "amzn1".
 
 	Options:
-	   --profile <AWS cli profile>
-	   	Set the default AWS cli profile.
+	   --profile <AWS CLI profile>
+	   	Set the default AWS CLI profile.
 
 	   --region <AWS region>
 	   	Set the default cfn-aio region.
@@ -419,7 +420,7 @@ configure() {
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--remote-name <remote name>
 	--availability-zone <zone letter>
@@ -433,7 +434,7 @@ configure() {
 
   while true; do
     if [[ -z ${CBD_PROFILE_NEW} ]]; then
-      read -p "Default AWS cli profile [${CBD_PROFILE}]: " CBD_PROFILE_NEW
+      read -p "Default AWS CLI profile [${CBD_PROFILE}]: " CBD_PROFILE_NEW
       CBD_PROFILE_NEW="${CBD_PROFILE_NEW:-${CBD_PROFILE}}"
     fi
     if [[ "${CBD_PROFILE_NEW}" == "default" ]]; then
@@ -442,7 +443,7 @@ configure() {
         break;
       else
         cat <<- EOF
-	cfn-aio: error: The AWS cli default profile is not configured.
+	cfn-aio: error: The AWS CLI default profile is not configured.
 
 	Please run 'aws configure' and try again.
 	EOF
@@ -454,8 +455,8 @@ configure() {
         break;
       else
         cat <<- EOF
-	Profile ${CBD_PROFILE_NEW} is not configured in the AWS cli. Please select
-	an existing AWS cli profile.
+	Profile ${CBD_PROFILE_NEW} is not configured in the AWS CLI. Please select
+	an existing AWS CLI profile.
 	EOF
         CBD_PROFILE_NEW=""
       fi
@@ -602,10 +603,10 @@ create_remote_help() {
 
 	Description:
 	   The create-remote command creates the AWS resources needed for CloudBD
-	   EC2 instances. The resources are created using the AWS cli using either
+	   EC2 instances. The resources are created using the AWS CLI using either
 	   the default configured profile or the profile provided via the
-	   --profile option. The AWS cli and a CloudFormation template are used
-	   in this process. The AWS cli profile must have the rights to create
+	   --profile option. The AWS CLI and a CloudFormation template are used
+	   in this process. The AWS CLI profile must have the rights to create
 	   the resources outlined below.
 
 	   After creating the AWS resources the create-remote command creates
@@ -659,8 +660,8 @@ create_remote_help() {
 	   that were set with the configure command. When an option is not
 	   provided the default configured value will be used.
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The region to create CloudBD resources in.
@@ -687,7 +688,7 @@ create_remote() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -732,7 +733,7 @@ create_remote() {
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--remote-name <remote name>
 	--ssh-cidr <cidr range>
@@ -838,8 +839,8 @@ delete_remote_help() {
 
 	Description:
 	   The delete-remote command deletes the AWS resources created by the
-	   create-remote command. The AWS cli and CloudFormtion are used in the
-	   process of deleting the resources. The AWS cli profile must have the
+	   create-remote command. The AWS CLI and CloudFormtion are used in the
+	   process of deleting the resources. The AWS CLI profile must have the
 	   rights to delete the resources outlined in the create-remote command
 	   help.
 
@@ -852,7 +853,7 @@ delete_remote_help() {
 	   command will not proceed. CloudBD disks may be deleted using an EC2
 	   instance that has been created in the same region using the
 	   create-instance command. Do not delete the CloudBD disk data using
-	   the AWS cli or the AWS web console. Using a CloudBD EC2 instance,
+	   the AWS CLI or the AWS web console. Using a CloudBD EC2 instance,
 	   the 'cloudbd destroy' command will quickly delete all the data
 	   previously stored on the disk using multiple parallel delete
 	   operations.
@@ -872,8 +873,8 @@ delete_remote_help() {
 	   that were set with the configure command. When an option is not
 	   provided the default configured value will be used.
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The AWS region where the remote was created.
@@ -893,7 +894,7 @@ delete_remote() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -930,7 +931,7 @@ delete_remote() {
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--remote-name <remote name>
 	EOF
@@ -1041,7 +1042,7 @@ update_remote_help() {
 	   should changes be made to the remote template.
 
 	   The resources are updated by issuing an 'aws cloudformation
-	   update-stack' command. The AWS cli profile must have the rights to
+	   update-stack' command. The AWS CLI profile must have the rights to
 	   update the CloudFormation resources outlined in the create-remote
 	   command help.
 
@@ -1057,8 +1058,8 @@ update_remote_help() {
 	   that were set with the configure command. When an option is not
 	   provided the default configured value will be used.
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The AWS region to update CloudBD resources in.
@@ -1078,7 +1079,7 @@ update_remote() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -1123,7 +1124,7 @@ update_remote() {
         usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--remote-name <remote name>
 	--ssh-cidr <cidr range>
@@ -1164,9 +1165,9 @@ create_instance_help() {
 	Description:
 	   The create-instance command creates an EC2 instance and configures it
 	   with CloudBD software. The resources are created using the AWS
-	   cli using either the default configured profile or the profile
-	   provided via the --profile option. The AWS cli and a CloudFormation
-	   template are used in this process. The AWS cli profile must have the
+	   CLI using either the default configured profile or the profile
+	   provided via the --profile option. The AWS CLI and a CloudFormation
+	   template are used in this process. The AWS CLI profile must have the
 	   rights to create an EC2 instance.
 
 	   The instance is created using the remote SSH key-pair and
@@ -1202,8 +1203,8 @@ create_instance_help() {
 	   configured values that were set with the configure command. When an
 	   option is not provided the default configured value will be used:
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The region to create CloudBD EC2 instance in.
@@ -1247,7 +1248,7 @@ create_instance() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -1317,7 +1318,7 @@ create_instance() {
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
 	--name <instance name>
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--remote-name <remote name>
 	--availability-zone <zone letter>
@@ -1396,16 +1397,16 @@ delete_instance_help() {
 	Description:
 	   The delete-instance command deletes an instance previously created
 	   by the create-instance command. The instance is deleted using the
-	   AWS cli using either the default configured profile or the profile
-	   provided via the --profile option. The AWS cli and CloudFormation
-	   are used in this process. The AWS cli profile must have the rights
+	   AWS CLI using either the default configured profile or the profile
+	   provided via the --profile option. The AWS CLI and CloudFormation
+	   are used in this process. The AWS CLI profile must have the rights
 	   to delete an EC2 instance using CloudFormation.
 
 	   It is recommended that the CloudBD disks be detached and deleted
 	   prior to deleting an instance. CloudBD disk data will remain in the
 	   remote S3 bucket until they are deleted. Undeleted disks will
 	   prevent the remote S3 bucket from being deleted. Do not delete the
-	   CloudBD disk data using the AWS cli or the AWS web console. The
+	   CloudBD disk data using the AWS CLI or the AWS web console. The
 	   steps for detaching and deleting CloudBD disks may be found here:
 
 	      https://www.cloudbd.io/docs/gs-manage-disks.html
@@ -1422,8 +1423,8 @@ delete_instance_help() {
 	   configured values that were set with the configure command. When an
 	   option is not provided the default configured value will be used:
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The AWS region to delete CloudBD resources in.
@@ -1453,7 +1454,7 @@ delete_instance() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -1478,7 +1479,7 @@ delete_instance() {
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
 	--name <instance name>
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	EOF
         )";;
@@ -1513,7 +1514,7 @@ update_instance_help() {
 	   should changes be made to the instance template.
 
 	   The instance is updated by issuing an 'aws cloudformation
-	   update-stack' command. The AWS cli profile must have the rights to
+	   update-stack' command. The AWS CLI profile must have the rights to
 	   update the CloudFormation stack containing the EC2 instance.
 
 	   The region and name must all match an existing instance and may not
@@ -1534,8 +1535,8 @@ update_instance_help() {
 	   configured values that were set with the configure command. When an
 	   option is not provided the default configured value will be used:
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The region with the CloudBD EC2 instance.
@@ -1565,7 +1566,7 @@ update_instance() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -1593,7 +1594,7 @@ update_instance() {
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
 	--name <instance name>
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	--availability-zone <zone letter>
 	--instance-type <type>
@@ -1667,7 +1668,7 @@ ssh_instance_help() {
 	   The ssh command SSH's into an existing EC2 instance created with the
 	   create-instance command. Using the required --name argument together
 	   with the region, the current public DNS address and operating system
-	   is queryed using the AWS cli and an ssh command is executed with the
+	   is queryed using the AWS CLI and an ssh command is executed with the
 	   following values:
 
 	      ssh -i config/cloudbd-<region>-<remote name>-key.pem \\
@@ -1677,7 +1678,7 @@ ssh_instance_help() {
 	   the name of the remote used when creating the instance, <username> is
 	   either 'ec2-user' for amzn1 and amzn2 instances or 'ubuntu' for Ubuntu
 	   instances, and <public dns> is the DNS address that was obtained by
-	   using the AWS cli.
+	   using the AWS CLI.
 
 	   If the optional -- argment is provided, anything following -- will
 	   be passed to ssh as additional arguments.
@@ -1694,14 +1695,14 @@ ssh_instance_help() {
 	   configured values that were set with the configure command. When an
 	   option is not provided the default configured value will be used:
 
-	   --profile <AWS cli profile>
-	   	The AWS cli profile to use.
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
 
 	   --region <AWS region>
 	   	The region with the CloudBD EC2 instance.
 
 	   -- <ssh options>
-	   	Argments to pass to SSH.
+	   	Arguments to pass to SSH.
 	EOF
   exit 0
 }
@@ -1728,7 +1729,7 @@ ssh_instance() {
 	if validate_profile "$2"; then
           CBD_PROFILE="$2"; shift 2;
         else
-	  echo "cfn-aio: error: argument --profile: The AWS cli profile is not configured."
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
           exit 1
         fi
         ;;
@@ -1758,7 +1759,7 @@ ssh_instance() {
 	cfn-aio: error: argument options: Invalid option, valid options are:
 
 	--name <instance name>
-	--profile <AWS cli profile>
+	--profile <AWS CLI profile>
 	--region <AWS region>
 	-- <arguments to pass to ssh command>
 	EOF
@@ -1799,6 +1800,150 @@ ssh_instance() {
   exec ssh -i ${SSHKeyFile} ${Username}@${EC2PublicDns} ${EC2_SSH_ARGUMENTS}
 }
 
+upload_instance_help() {
+  cat <<- EOF
+	Usage:
+	   cfn-aio upload --name <instance name> [options] -- <list of files>
+
+	Description:
+	   The upload command uploads files to an existing EC2 instance created
+	   with the create-instance command. Using the required --name argument
+	   together with the region, the current public DNS address and operating
+	   system is queryed using the AWS CLI and an scp command is executed
+	   with the following values:
+
+	      scp -i config/cloudbd-<region>-<remote name>-key.pem \\
+	         <list of files> <username>@<public dns>:
+
+	   Where <region> is the region value for the instance, <remote name> is
+	   the name of the remote used when creating the instance, <username> is
+	   either 'ec2-user' for amzn1 and amzn2 instances or 'ubuntu' for Ubuntu
+	   instances, <public dns> is the DNS address that was obtained by using
+	   the AWS CLI and <list of files> is one more files to upload to the
+	   EC2 instance.
+
+	Options:
+	   Required options:
+
+	   --name <instance name>
+	   	The unique name for the instance. Must start with a letter and
+	   	contain alpha-numeric characters and hyphens only. 32
+	   	characters max.
+
+	   -- <list of files>
+	   	One or more file paths to local files to upload to the EC2
+	   	instance. The -- option must be the last option provided.
+
+	   When the following options are provided they override the default
+	   configured values that were set with the configure command. When an
+	   option is not provided the default configured value will be used:
+
+	   --profile <AWS CLI profile>
+	   	The AWS CLI profile to use.
+
+	   --region <AWS region>
+	   	The region with the CloudBD EC2 instance.
+	EOF
+  exit 0
+}
+
+upload_instance() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      help)
+        shift; upload_instance_help;;
+      --name)
+	if validate_name "$2"; then
+          CBD_EC2_NAME="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --name: Invalid name provided.
+
+		Names must start with an alphabetic character and contain only
+		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+		EOF
+          exit 1
+        fi
+        ;;
+      --profile)
+	if validate_profile "$2"; then
+          CBD_PROFILE="$2"; shift 2;
+        else
+	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
+          exit 1
+        fi
+        ;;
+      --region)
+	if validate_region "$2"; then
+          CBD_REGION="$2"; shift 2;
+        else
+          cat <<- EOF
+		cfn-aio: error: argument --region: Invalid or unsupported region provided.
+		Supported regions are:
+
+		us-east-1	us-east-2	us-west-1	us-west-2
+		eu-west-1	eu-west-2	eu-west-3	eu-central-1
+		ap-northeast-1	ap-northeast-2	ap-southeast-1	ap-southeast-2
+		ap-south-1	ca-central-1	sa-east-1
+		EOF
+          exit 1
+        fi
+        ;;
+      --)
+        shift
+        EC2_SCP_FILE_AGS="$@"
+        break
+        ;;
+      *)
+        usage_exit "$(cat <<- EOF
+	cfn-aio: error: argument options: Invalid option, valid options are:
+
+	--name <instance name>
+	--profile <AWS CLI profile>
+	--region <AWS region>
+	-- <list of files to upload>
+	EOF
+        )";;
+    esac
+  done
+
+  if [[ ! -n ${CBD_EC2_NAME} ]]; then
+    usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
+  fi
+
+  if [[ ! -n ${EC2_SCP_FILE_AGS} ]]; then
+    usage_exit "cfn-aio: error: argument -- <list of files>: Missing required argument -- <list of files>"
+  fi
+
+  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
+
+  get_stack_outputs ${EC2StackName}
+  local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
+  local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
+  local RemoteName=$(grep RemoteName <<< "${Outputs}" | awk '{print $2}')
+
+  local SSHKeyName="cloudbd-${RemoteName}-${CBD_REGION}-key"
+  local SSHKeyFile="config/${SSHKeyName}.pem"
+
+  local EC2PublicDns=$(aws ec2 describe-instances \
+    --profile ${CBD_PROFILE} \
+    --region ${CBD_REGION} \
+    --instance-ids ${InstanceId} \
+    --query 'Reservations[].Instances[].PublicDnsName' \
+    --output text)
+
+  case "${OperatingSystem}" in
+    amzn1|amzn2|rhel7)
+      local Username="ec2-user";;
+    trusty|xenial|bionic)
+      local Username="ubuntu";;
+    centos7)
+      local Username="centos";;
+  esac
+
+  exec scp -i ${SSHKeyFile} ${EC2_SCP_FILE_AGS} ${Username}@${EC2PublicDns}:
+}
+
 if [[ $# -eq 0 ]]; then
   usage_exit "cfn-aio: error: too few arguments"
 fi
@@ -1822,10 +1967,13 @@ case "$1" in
     shift; update_instance "$@";;
   ssh)
     shift; ssh_instance "$@";;
+  upload)
+    shift; upload_instance "$@";;
   *)
     usage_exit "$(cat <<- EOF
 	cfn-aio: error: argument command: Invalid choice, valid choices are:
 
+	help
 	configure
 	create-remote
 	create-instance
@@ -1834,6 +1982,7 @@ case "$1" in
 	update-remote
 	update-instance
 	ssh
+	upload
 	EOF
     )";;
 esac
