@@ -40,38 +40,9 @@ Parameters:
     MaxLength: '1'
     AllowedPattern: "[a-f]"
     ConstraintDescription: must be a single character in the range a-f
-Mappings:
-  AWSRegionArch2AMI:
-    us-east-1:
-      HVM64: ami-009d6802948d06e52
-    us-east-2:
-      HVM64: ami-02e680c4540db351e
-    us-west-1:
-      HVM64: ami-011b6930a81cd6aaf
-    us-west-2:
-      HVM64: ami-01bbe152bf19d0289
-    ca-central-1:
-      HVM64: ami-076b4adb3f90cd384
-    eu-west-1:
-      HVM64: ami-09693313102a30b2c
-    eu-west-2:
-      HVM64: ami-0274e11dced17bb5b
-    eu-west-3:
-      HVM64: ami-051707cdba246187b
-    eu-central-1:
-      HVM64: ami-034fffcc6a0063961
-    ap-northeast-1:
-      HVM64: ami-0a2de1c3b415889d2
-    ap-northeast-2:
-      HVM64: ami-0b4fdb56a00adb616
-    ap-southeast-1:
-      HVM64: ami-0b84d2c53ad5250c2
-    ap-southeast-2:
-      HVM64: ami-08589eca6dcc9b39c
-    ap-south-1:
-      HVM64: ami-06bcd1131b2f55803
-    sa-east-1:
-      HVM64: ami-0112d42866980b373
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
 Resources:
   CloudBDAmzn2Instance:
     Type: AWS::EC2::Instance
@@ -82,11 +53,7 @@ Resources:
       SubnetId:
         Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-subnet-', !Ref AvailabilityZone ] ]
       KeyName: !Ref KeyName
-      ImageId:
-        Fn::FindInMap:
-        - AWSRegionArch2AMI
-        - !Ref AWS::Region
-        - HVM64
+      ImageId: !Ref LatestAmiId
       Tags:
         -
           Key: Name

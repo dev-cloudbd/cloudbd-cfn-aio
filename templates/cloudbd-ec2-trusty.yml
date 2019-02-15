@@ -43,35 +43,35 @@ Parameters:
 Mappings:
   AWSRegionArch2AMI:
     us-east-1:
-      HVM64: ami-05a36d3b9aa4a17ac
-    us-west-2:
-      HVM64: ami-0ea790e761025f9ce
-    us-west-1:
-      HVM64: ami-056411f6be4840844
-    eu-west-1:
-      HVM64: ami-02699dba41e68180a
-    eu-west-2:
-      HVM64: ami-024279d2324df257e
-    eu-west-3:
-      HVM64: ami-0b49b417468d0e8d1
-    eu-central-1:
-      HVM64: ami-02bcc91bbf9535b00
-    ap-northeast-1:
-      HVM64: ami-0be9269b44d4b26c1
-    ap-northeast-2:
-      HVM64: ami-017332df4b882edd2
-    ap-southeast-1:
-      HVM64: ami-09592de3725419634
-    ap-southeast-2:
-      HVM64: ami-0d9ca8d416482590e
-    ap-south-1:
-      HVM64: ami-09dcf5653a185f5df
+      HVM64: ami-08b8af1c94b41235d
     us-east-2:
-      HVM64: ami-0970ab4b97fe3a913
+      HVM64: ami-037d9ee5685d75d4d
+    us-west-1:
+      HVM64: ami-0a4acfd7b7b3c7b35
+    us-west-2:
+      HVM64: ami-0871409b5c1c6b128
     ca-central-1:
-      HVM64: ami-031b4238707e9edc0
+      HVM64: ami-0992b0b9c07b0eb4d
+    eu-west-1:
+      HVM64: ami-0f23faa82d114fc34
+    eu-west-2:
+      HVM64: ami-0c967c70f8d9a12ca
+    eu-west-3:
+      HVM64: ami-0acff3d8c4a615d59
+    eu-central-1:
+      HVM64: ami-05abe2b78a8130c27
+    ap-northeast-1:
+      HVM64: ami-09a19edcb709d7a77
+    ap-northeast-2:
+      HVM64: ami-0398ca19c23e260d9
+    ap-southeast-1:
+      HVM64: ami-0c3763fc97bb117a7
+    ap-southeast-2:
+      HVM64: ami-0db7df036ebf22fae
+    ap-south-1:
+      HVM64: ami-0fd6101258e0ebba7
     sa-east-1:
-      HVM64: ami-01c858a779ba95305
+      HVM64: ami-06d69f6c430635efe
 Resources:
   CloudBDTrustyInstance:
     Type: AWS::EC2::Instance

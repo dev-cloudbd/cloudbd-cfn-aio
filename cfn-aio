@@ -306,7 +306,6 @@ do_help() {
 	   delete-remote    Delete remote resources
 	   delete-instance  Delete an EC2 instance
 	   update-remote    Update remote resources
-	   update-instance  Update an EC2 instance
 	   ssh              SSH into an EC2 instance
 	   upload           Upload file(s) to an EC2 instance
 	EOF
@@ -1502,163 +1501,6 @@ delete_instance() {
   [ $? -eq 0 ] && cloudformation_tail ${EC2StackName} deleting || exit $?
 }
 
-update_instance_help() {
-  cat <<- EOF
-	Usage:
-	   cfn-aio update-instance --name <instance name> --instance-type <type> [options]
-
-	Description:
-	   The update-instance command updates an instance previouly created
-	   via the create-instance command. This command can be used to modify
-	   the instance type of an existing instance or to update the instance
-	   should changes be made to the instance template.
-
-	   The instance is updated by issuing an 'aws cloudformation
-	   update-stack' command. The AWS CLI profile must have the rights to
-	   update the CloudFormation stack containing the EC2 instance.
-
-	   The region and name must all match an existing instance and may not
-	   be changed to new values by this command.
-
-	Options:
-	   Required options:
-
-	   --name <instance name>
-	   	The unique name for the instance. Must start with a letter and
-	   	contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
-
-	   --instance-type <type>
-	   	The EC2 instance type. e.g. t2.micro, m5.large, etc.
-
-	   When the following options are provided they override the default
-	   configured values that were set with the configure command. When an
-	   option is not provided the default configured value will be used:
-
-	   --profile <AWS CLI profile>
-	   	The AWS CLI profile to use.
-
-	   --region <AWS region>
-	   	The region with the CloudBD EC2 instance.
-	EOF
-  exit 0
-}
-
-update_instance() {
-  while [[ $# -gt 0 ]]; do
-    case "$1" in
-      help)
-        shift; update_instance_help;;
-      --name)
-	if validate_name "$2"; then
-          CBD_EC2_NAME="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --name: Invalid name provided.
-
-		Names must start with an alphabetic character and contain only
-		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
-		EOF
-          exit 1
-        fi
-        ;;
-      --profile)
-	if validate_profile "$2"; then
-          CBD_PROFILE="$2"; shift 2;
-        else
-	  echo "cfn-aio: error: argument --profile: The AWS CLI profile is not configured."
-          exit 1
-        fi
-        ;;
-      --region)
-	if validate_region "$2"; then
-          CBD_REGION="$2"; shift 2;
-        else
-          cat <<- EOF
-		cfn-aio: error: argument --region: Invalid or unsupported region provided.
-		Supported regions are:
-
-		us-east-1	us-east-2	us-west-1	us-west-2
-		eu-west-1	eu-west-2	eu-west-3	eu-central-1
-		ap-northeast-1	ap-northeast-2	ap-southeast-1	ap-southeast-2
-		ap-south-1	ca-central-1	sa-east-1
-		EOF
-          exit 1
-        fi
-        ;;
-      --instance-type)
-        CBD_EC2_INSTANCE_TYPE_NEW="$2"; shift 2;
-        ;;
-      *)
-        usage_exit "$(cat <<- EOF
-	cfn-aio: error: argument options: Invalid option, valid options are:
-
-	--name <instance name>
-	--profile <AWS CLI profile>
-	--region <AWS region>
-	--availability-zone <zone letter>
-	--instance-type <type>
-	EOF
-        )";;
-    esac
-  done
-
-  if [[ ! -n ${CBD_EC2_NAME} ]]; then
-    usage_exit "cfn-aio: error: argument --name: Missing required argument --name"
-  fi
-
-  if [[ ! -n ${CBD_EC2_INSTANCE_TYPE_NEW} ]]; then
-    usage_exit "cfn-aio: error: argument --instance-type: Missing required argument --instance-type"
-  fi
-
-  if ! check_instance_type "${CBD_EC2_INSTANCE_TYPE_NEW}"; then
-    echo "cfn-aio: error: instance type invalid"
-    exit 1
-  fi
-  CBD_EC2_INSTANCE_TYPE=${CBD_EC2_INSTANCE_TYPE_NEW}
-
-  local EC2StackName="cloudbd-ec2-${CBD_EC2_NAME}"
-
-  get_stack_outputs ${EC2StackName}
-  local InstanceId=$(grep InstanceId <<< "${Outputs}" | awk '{print $2}')
-  local OperatingSystem=$(grep OperatingSystem <<< "${Outputs}" | awk '{print $2}')
-  local RemoteName=$(grep RemoteName <<< "${Outputs}" | awk '{print $2}')
-  local SSHKeyName="cloudbd-${RemoteName}-${CBD_REGION}-key"
-
-  if [[ ! -n ${InstanceId} ]]; then
-    echo "cfn-aio: error: instance id: Unable to query instance id"
-    exit 1
-  fi
-
-  local Zone=$(aws ec2 describe-instances \
-    --profile ${CBD_PROFILE} \
-    --region ${CBD_REGION} \
-    --instance-ids ${InstanceId} \
-    --query 'Reservations[].Instances[].Placement.AvailabilityZone' \
-    --output text)
-
-  if [[ ! -n ${Zone} ]]; then
-    echo "cfn-aio: error: availability zone: Unable to query availability zone"
-    exit 1
-  fi
-
-  echo "Updating CloudFormation stack ${EC2StackName} in ${CBD_REGION}"
-
-  aws cloudformation update-stack \
-    --profile ${CBD_PROFILE} \
-    --region ${CBD_REGION} \
-    --template-body file://templates/cloudbd-ec2-${OperatingSystem}.yml \
-    --stack-name ${EC2StackName} \
-    --parameters \
-        ParameterKey=InstanceName,ParameterValue=${CBD_EC2_NAME} \
-        ParameterKey=RemoteName,ParameterValue=${RemoteName} \
-        ParameterKey=KeyName,ParameterValue=${SSHKeyName} \
-        ParameterKey=InstanceType,ParameterValue=${CBD_EC2_INSTANCE_TYPE} \
-        ParameterKey=AvailabilityZone,ParameterValue=${Zone: -1} > /dev/null
-
-  [ $? -eq 0 ] && cloudformation_tail ${EC2StackName} || exit $?
-}
-
 ssh_instance_help() {
   cat <<- EOF
 	Usage:
@@ -1963,8 +1805,6 @@ case "$1" in
     shift; delete_instance "$@";;
   update-remote)
     shift; update_remote "$@";;
-  update-instance)
-    shift; update_instance "$@";;
   ssh)
     shift; ssh_instance "$@";;
   upload)
@@ -1980,7 +1820,6 @@ case "$1" in
 	delete-remote
 	delete-instance
 	update-remote
-	update-instance
 	ssh
 	upload
 	EOF
