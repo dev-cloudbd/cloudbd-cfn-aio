@@ -49,15 +49,16 @@ Resources:
     Properties:
       InstanceType: !Ref InstanceType
       SecurityGroupIds:
-        - Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-SecurityGroup' ] ]
+        - Fn::ImportValue: !Sub 'cloudbd-resources-${RemoteName}-SecurityGroup'
+        - Fn::ImportValue: !Sub 'cloudbd-resources-${RemoteName}-DefaultSecurityGroup'
       SubnetId:
-        Fn::ImportValue: !Join [ '', ['cloudbd-resources-', !Ref RemoteName, '-subnet-', !Ref AvailabilityZone ] ]
+        Fn::ImportValue: !Sub 'cloudbd-resources-${RemoteName}-subnet-${AvailabilityZone}'
       KeyName: !Ref KeyName
       ImageId: !Ref LatestAmiId
       Tags:
         -
           Key: Name
-          Value: !Join [ '-', ['cloudbd-ec2', !Ref InstanceName ] ]
+          Value: !Sub 'cloudbd-ec2-${InstanceName}'
       UserData:
         Fn::Base64:
           !Sub |
@@ -154,7 +155,7 @@ Resources:
                     chown root:cloudbd ${!ConfFile}
                   fi
                 - ConfURL: !Ref RemoteConfURL
-                  ConfFile: !Join [ '', ['/etc/cloudbd/remotes.d/', !Ref RemoteName, '.conf' ] ]
+                  ConfFile: !Sub '/etc/cloudbd/remotes.d/${RemoteName}.conf'
             02-creds:
               command: !Sub
                 - |

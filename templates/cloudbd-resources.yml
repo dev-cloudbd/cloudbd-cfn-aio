@@ -59,11 +59,7 @@ Resources:
                   - s3:GetObject
                   - s3:DeleteObject
                 Resource:
-                  - Fn::Join:
-                    - ""
-                    -
-                      - Fn::GetAtt: [ "CloudBDS3Bucket", "Arn" ]
-                      - "/cloudbd/*"
+                  - !Sub '${CloudBDS3Bucket.Arn}/cloudbd/*'
   CloudBDVPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -179,13 +175,7 @@ Resources:
       VpcId: !Ref CloudBDVPC
       RouteTableIds:
         - !Ref CloudBDRouteTable
-      ServiceName:
-        Fn::Join:
-          - '.'
-          -
-            - com.amazonaws
-            - !Ref AWS::Region
-            - s3
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
   CloudBDSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -201,48 +191,53 @@ Outputs:
     Description: Name of the CloudBD test bucket
     Value: !Ref CloudBDS3Bucket
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", BucketName ] ]
+      Name: !Sub '${AWS::StackName}-BucketName'
   UserName:
     Description: Name of the CloudBD test user
     Value: !Ref CloudBDTestUser
+  DefaultSecurityGroup:
+    Description: VPC Default Security Group Ref
+    Value: !Sub '${CloudBDVPC.DefaultSecurityGroup}'
+    Export:
+      Name: !Sub '${AWS::StackName}-DefaultSecurityGroup'
   SecurityGroup:
     Description: CloudBD Security Group Ref
     Value: !Ref CloudBDSecurityGroup
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", SecurityGroup ] ]
+      Name: !Sub '${AWS::StackName}-SecurityGroup'
   SubNetA:
     Description: CloudBD Subnet A Ref
     Value:
       !If [AvailabilityZoneA, !Ref CloudBDSubnetA, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-a ] ]
+      Name: !Sub '${AWS::StackName}-subnet-a'
   SubNetB:
     Description: CloudBD Subnet B Ref
     Value:
       !If [AvailabilityZoneB, !Ref CloudBDSubnetB, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-b ] ]
+      Name: !Sub '${AWS::StackName}-subnet-b'
   SubNetC:
     Description: CloudBD Subnet C Ref
     Value:
       !If [AvailabilityZoneC, !Ref CloudBDSubnetC, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-c ] ]
+      Name: !Sub '${AWS::StackName}-subnet-c'
   SubNetD:
     Description: CloudBD Subnet D Ref
     Value:
       !If [AvailabilityZoneD, !Ref CloudBDSubnetD, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-d ] ]
+      Name: !Sub '${AWS::StackName}-subnet-d'
   SubNetE:
     Description: CloudBD Subnet E Ref
     Value:
       !If [AvailabilityZoneE, !Ref CloudBDSubnetE, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-e ] ]
+      Name: !Sub '${AWS::StackName}-subnet-e'
   SubNetF:
     Description: CloudBD Subnet F Ref
     Value:
       !If [AvailabilityZoneF, !Ref CloudBDSubnetE, 'unconfigured' ]
     Export:
-      Name: !Join [ "-", [ !Ref "AWS::StackName", subnet-f ] ]
+      Name: !Sub '${AWS::StackName}-subnet-f'
