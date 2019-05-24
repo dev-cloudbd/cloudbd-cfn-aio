@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2018 CloudBD, LLC
+# Copyright (c) 2018-2019 CloudBD, LLC
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -107,7 +107,7 @@ build_all_availability_zones() {
 
 validate_os() {
   case "$1" in
-    amzn1|amzn2|trusty|xenial|bionic)
+    amzn1|amzn2|xenial|bionic)
       return 0;;
     *)
       return 1;;
@@ -368,8 +368,8 @@ configure_help() {
 
 	   CBD_EC2_OS - This is the operating system that will be used by
 	   default when creating EC2 instances using the create-instance
-	   command. Supported operating systems are: amzn1, amzn2, trusty,
-	   xenial, and bionic. The default value when unconfigured is "amzn1".
+	   command. Supported operating systems are: amzn1, amzn2, xenial,
+	   and bionic. The default value when unconfigured is "amzn1".
 
 	Options:
 	   --profile <AWS CLI profile>
@@ -561,7 +561,6 @@ configure() {
 
 	amzn1		Amazon Linux AMI
 	amzn2		Amazon Linux 2
-	trusty		Ubuntu 14.04 LTS / trusty
 	xenial		Ubuntu 16.04 LTS / xenial
 	bionic		Ubuntu 18.04 LTS / bionic
 	EOF
@@ -1220,7 +1219,7 @@ create_instance_help() {
 
 	   --os <os name>
 	   	The operating system to use for the EC2 instance. Supported
-	   	values are: amzn1, amzn2, trusty, xenial, bionic.
+	   	values are: amzn1, amzn2, xenial, bionic.
 	EOF
   exit 0
 }
@@ -1290,7 +1289,6 @@ create_instance() {
 
 		amzn1		Amazon Linux AMI
 		amzn2		Amazon Linux 2
-		trusty		Ubuntu 14.04 LTS / trusty
 		xenial		Ubuntu 16.04 LTS / xenial
 		bionic		Ubuntu 18.04 LTS / bionic
 		EOF
@@ -1633,7 +1631,7 @@ ssh_instance() {
   case "${OperatingSystem}" in
     amzn1|amzn2|rhel7)
       local Username="ec2-user";;
-    trusty|xenial|bionic)
+    xenial|bionic)
       local Username="ubuntu";;
     centos7)
       local Username="centos";;
@@ -1777,7 +1775,7 @@ upload_instance() {
   case "${OperatingSystem}" in
     amzn1|amzn2|rhel7)
       local Username="ec2-user";;
-    trusty|xenial|bionic)
+    xenial|bionic)
       local Username="ubuntu";;
     centos7)
       local Username="centos";;
