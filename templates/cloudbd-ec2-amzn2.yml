@@ -133,9 +133,25 @@ Resources:
               group: "root"
         Install:
           files:
-            /etc/sysctl.d/20-cloudbd.conf:
+            /etc/sysctl.d/55-cloudbd.conf:
               content: !Sub |
+                # Start writing data to CloudBD as soon as possible to reduce buffer
+                # cache latency.
                 vm.dirty_background_bytes=2097152
+                
+                # Request/response protocols like rpc and REST send some data
+                # and wait for a response so there will always be idle time.
+                # Dont shrink congestion window while idle.
+                net.ipv4.tcp_slow_start_after_idle=0
+                
+                # Increase NAPI polling cycle max time to reduce 'squeezed' events
+                net.core.netdev_budget_usecs = 5000
+                
+                # pfifo_fast works best on EC2 with request/response
+                net.core.default_qdisc = pfifo_fast
+                
+                # helps with unix domain sockets from kernel to user land driver
+                net.core.wmem_max = 1056768
               mode: "000644"
               owner: "root"
               group: "root"
@@ -176,7 +192,7 @@ Resources:
             04-sysctls:
               command: !Sub |
                 set -xe
-                sysctl vm.dirty_background_bytes=2097152
+                sysctl --system
     CreationPolicy:
       ResourceSignal:
         Timeout: PT10M
