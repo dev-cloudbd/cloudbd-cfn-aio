@@ -804,12 +804,11 @@ create_remote() {
 
   umask 077;
   cat <<- EOF > ${RemoteConfFile}
-	type = s3_v4
-	endpoint_url = http://s3.${CBD_REGION}.amazonaws.com
+	type = aws_iam_user
 	region = ${CBD_REGION}
 	bucket = ${BucketName}
 	access_key_id = ${AccessKeyId}
-	secret_key = ${SecretKey}
+	secret_access_key = ${SecretKey}
 	EOF
 
   echo "Created CloudBD configuration file ${RemoteConfFile}"
