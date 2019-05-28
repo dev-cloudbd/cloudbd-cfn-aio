@@ -9,14 +9,14 @@ Parameters:
     Type: String
     MinLength: '1'
     MaxLength: '32'
-    AllowedPattern: "[a-zA-Z][a-zA-Z_0-9-]*"
+    AllowedPattern: "[a-zA-Z_0-9-]*"
     ConstraintDescription: must start with an alphabetic character and contain only alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
   RemoteName:
     Description: The remote name
     Type: String
     MinLength: '1'
     MaxLength: '32'
-    AllowedPattern: "[a-zA-Z][a-zA-Z_0-9-]*"
+    AllowedPattern: "[a-zA-Z_0-9-]*"
     ConstraintDescription: must start with an alphabetic character and contain only alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instance

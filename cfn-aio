@@ -65,7 +65,7 @@ validate_cidr() {
 }
 
 validate_name() {
-  local REGEX='^[a-zA-Z][a-zA-Z0-9-]{0,31}$'
+  local REGEX='^[a-zA-Z0-9-]{1,32}$'
   [[ $1 =~ $REGEX ]]
   return $?
 }
@@ -494,8 +494,8 @@ configure() {
       break;
     else
       cat <<- EOF
-	Remote names must start with a letter and contain alpha-numeric characters and
-	hyphens only. 32 characters max.
+	Remote names must contain alphanumeric characters and hyphens only.
+	32 characters max.
 	EOF
       CBD_REMOTE_NAME_NEW=""
     fi
@@ -665,9 +665,8 @@ create_remote_help() {
 	   	The region to create CloudBD resources in.
 
 	   --remote-name <remote name>
-	   	A unique name for the remote within the region. It must start with
-	   	a letter and contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
+	   	A unique name for the remote within the region. It must contain
+	   	alphanumeric characters and hyphens only. 32 characters max.
 
 	   --ssh-cidr <cidr range>
 	   	The SSH Cidr address range that is allowed to SSH into EC2
@@ -713,8 +712,8 @@ create_remote() {
           cat <<- EOF
 		cfn-aio: error: argument --remote_name: Invalid remote name provided.
 
-		Remote names must start with a letter and contain alpha-numeric characters and
-		hyphens only. 32 characters max.
+		Remote names must contain alphanumeric characters and hyphens only.
+		32 characters max.
 		EOF
           exit 1
         fi
@@ -919,8 +918,8 @@ delete_remote() {
           cat <<- EOF
 		cfn-aio: error: argument --remote_name: Invalid remote name provided.
 
-		Remote names must start with a letter and contain alpha-numeric characters and
-		hyphens only. 32 characters max.
+		Remote names must contain alphanumeric characters and hyphens only.
+		32 characters max.
 		EOF
           exit 1
         fi
@@ -1104,8 +1103,8 @@ update_remote() {
           cat <<- EOF
 		cfn-aio: error: argument --remote_name: Invalid remote name provided.
 
-		Remote names must start with a letter and contain alpha-numeric characters and
-		hyphens only. 32 characters max.
+		Remote names must contain alphanumeric characters and hyphens only.
+		32 characters max.
 		EOF
           exit 1
         fi
@@ -1193,9 +1192,9 @@ create_instance_help() {
 	   Required options:
 
 	   --name <instance name>
-	   	A unique name for the instance within the region. It must start
-	   	with a letter and contain alpha-numeric characters and hyphens
-	   	only. 32 characters max.
+	   	A unique name for the instance within the region. It must
+	   	and contain alphanumeric characters and hyphens only. 32
+	   	characters max.
 
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
@@ -1236,8 +1235,8 @@ create_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --name: Invalid name provided.
 
-		Names must start with an alphabetic character and contain only
-		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+		Names must contain only alphanumeric characters and hyphens. 32
+		characters max.
 		EOF
           exit 1
         fi
@@ -1273,8 +1272,8 @@ create_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --remote_name: Invalid remote name provided.
 
-		Remote names must start with a letter and contain alpha-numeric characters and
-		hyphens only. 32 characters max.
+		Remote names must contain alphanumeric characters and hyphens only. 32
+		characters max.
 		EOF
           exit 1
         fi
@@ -1412,9 +1411,9 @@ delete_instance_help() {
 	   Required options:
 
 	   --name <instance name>
-	   	The unique name for the instance within the region. It must start
-	   	with a letter and contain alpha-numeric characters and hyphens
-	   	only. 32 characters max.
+	   	The unique name for the instance within the region. It must
+	   	contain alphanumeric characters and hyphens only. 32
+	   	characters max.
 
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
@@ -1441,8 +1440,8 @@ delete_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --name: Invalid name provided.
 
-		Names must start with an alphabetic character and contain only
-		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+		Names must contain only alphanumeric characters and hyphens. 32
+		characters max.
 		EOF
           exit 1
         fi
@@ -1527,9 +1526,8 @@ ssh_instance_help() {
 	   Required options:
 
 	   --name <instance name>
-	   	The unique name for the instance. Must start with a letter and
-	   	contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
+	   	The unique name for the instance. It must contain alphanumeric
+	   	characters and hyphens only. 32 characters max.
 
 	   When the following options are provided they override the default
 	   configured values that were set with the configure command. When an
@@ -1559,8 +1557,8 @@ ssh_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --name: Invalid name provided.
 
-		Names must start with an alphabetic character and contain only
-		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+		Names must contain only alphanumeric characters and hyphens. 32
+		characters max.
 		EOF
           exit 1
         fi
@@ -1666,9 +1664,8 @@ upload_instance_help() {
 	   Required options:
 
 	   --name <instance name>
-	   	The unique name for the instance. Must start with a letter and
-	   	contain alpha-numeric characters and hyphens only. 32
-	   	characters max.
+	   	The unique name for the instance. It must contain alphanumeric
+	   	characters and hyphens only. 32 characters max.
 
 	   -- <list of files>
 	   	One or more file paths to local files to upload to the EC2
@@ -1699,8 +1696,8 @@ upload_instance() {
           cat <<- EOF
 		cfn-aio: error: argument --name: Invalid name provided.
 
-		Names must start with an alphabetic character and contain only
-		alphanumeric characters (case-sensitive) and hyphens. 32 chars max.
+		Names must contain only alphanumeric characters and hyphens. 32
+		characters max.
 		EOF
           exit 1
         fi
